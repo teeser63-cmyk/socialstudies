@@ -1,3 +1,5 @@
+[file name]: index.html
+[file content begin]
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -27,11 +29,22 @@
         .border-red-border { border-left-color: #dc2626; }
         .border-purple-border { border-left-color: #7c3aed; }
         
-        /* Центрирование модального окна */
+        /* Исправленное позиционирование модального окна */
         #modal {
-            display: flex !important;
+            display: flex;
             align-items: center;
             justify-content: center;
+            z-index: 1000;
+        }
+        #modal > div:first-child {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        #modal > div:last-child {
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -65,7 +78,7 @@
                             <i class="fas fa-book-open text-blue-600 text-xl"></i>
                         </div>
                         <h3 class="font-bold text-lg mb-2">Сюжетная игра</h3>
-                        <p class="text-sm text-slate-500">30 интерактивных сцен по всем темам</p>
+                        <p class="text-sm text-slate-500">30+ интерактивных сцен по всем темам</p>
                     </div>
                     <div class="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md transition-shadow cursor-pointer" onclick="switchMode('olympiad')">
                         <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mb-4">
@@ -102,11 +115,6 @@
 
         <!-- Сюжетная игра -->
         <section id="view-story" class="view-section hidden">
-            <div class="mb-6">
-                <h2 class="text-3xl font-black mb-2 font-serif">Сюжетная игра</h2>
-                <p class="text-slate-500">Изучайте обществоведение через интерактивные сцены</p>
-            </div>
-            
             <div class="flex flex-col lg:flex-row gap-6">
                 <!-- Левая колонка -->
                 <div class="lg:w-1/4 space-y-6">
@@ -123,7 +131,7 @@
                         </div>
                         <div class="grid grid-cols-2 gap-4 mb-6">
                             <div class="bg-blue-50 p-4 rounded-xl">
-                                <div class="text-2xl font-bold text-blue-600" id="scene-count">0/30</div>
+                                <div class="text-2xl font-bold text-blue-600" id="scene-count">0</div>
                                 <div class="text-xs font-bold text-blue-400 uppercase">Сцены</div>
                             </div>
                             <div class="bg-emerald-50 p-4 rounded-xl">
@@ -131,66 +139,366 @@
                                 <div class="text-xs font-bold text-emerald-400 uppercase">Опыт</div>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-2">
-                            <button onclick="loadNextScene()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
-                                <i class="fas fa-forward mr-2"></i> Следующая сцена
-                            </button>
-                            <button onclick="loadSpecificScene()" class="w-full bg-white border border-slate-300 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors">
-                                <i class="fas fa-list mr-2"></i> Выбрать сцену
-                            </button>
-                        </div>
+                        <button onclick="loadNextScene()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-forward mr-2"></i> Следующая сцена
+                        </button>
                     </div>
                     
                     <div class="bg-white rounded-2xl p-6 border shadow-sm">
                         <h3 class="font-bold text-lg mb-4">Темы</h3>
                         <div id="theme-progress" class="space-y-3">
-                            <!-- Прогресс по темам будет заполнен через JS -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-blue-600">Человек</span>
+                                <span class="text-sm font-bold">0%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-green-600">Общение</span>
+                                <span class="text-sm font-bold">0%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-red-600">Государство</span>
+                                <span class="text-sm font-bold">0%</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-purple-600">Культура</span>
+                                <span class="text-sm font-bold">0%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Центральная колонка -->
-                <div class="lg:w-3/4">
+                <div class="lg:w-2/4">
                     <div id="game-scene" class="bg-white rounded-2xl p-6 border shadow-sm min-h-[500px]">
                         <div class="text-center py-12">
                             <i class="fas fa-book-open text-4xl text-slate-300 mb-4"></i>
                             <h3 class="text-xl font-bold mb-2">Сюжетная игра</h3>
                             <p class="text-slate-500 mb-6">Начните новую игру для погружения в мир обществоведения</p>
-                            <button onclick="startNewGame()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                            <button onclick="loadNextScene()" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors">
                                 <i class="fas fa-play mr-2"></i> Начать игру
                             </button>
                         </div>
                     </div>
                     
                     <div id="choice-buttons" class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-3 hidden"></div>
+                </div>
+
+                <!-- Правая колонка -->
+                <div class="lg:w-1/4 space-y-6">
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Информация о сцене</h3>
+                        <div id="scene-info" class="space-y-3">
+                            <p class="text-slate-500 text-sm">Начните игру для просмотра информации</p>
+                        </div>
+                    </div>
                     
-                    <!-- Навигация по сценам -->
-                    <div class="mt-6 bg-white rounded-2xl p-6 border shadow-sm">
-                        <h3 class="font-bold text-lg mb-4">Все сцены</h3>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-2">
-                            ${Array.from({length: 30}, (_, i) => i + 1).map(i => `
-                                <button onclick="loadScene(${i})" class="scene-btn p-2 rounded-lg border text-sm font-medium hover:bg-slate-50 transition-colors" data-scene="${i}">
-                                    Сцена ${i}
-                                </button>
-                            `).join('')}
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Подсказки</h3>
+                        <div id="hints" class="space-y-2">
+                            <p class="text-slate-500 text-sm">Каждая сцена проверяет конкретные знания по предмету</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Остальные секции остаются без изменений -->
-        <!-- Олимпиадный тренажер, Глоссарий, Прогресс, Схемы -->
-        
+        <!-- Олимпиадный тренажер -->
+        <section id="view-olympiad" class="view-section hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-black mb-2 font-serif">Олимпиадный тренажер</h2>
+                <p class="text-slate-500">Задания разного уровня сложности и формата</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="mb-6">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <h3 class="text-xl font-bold">Доступные задания</h3>
+                            <div class="relative w-full md:w-64">
+                                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                                <input type="text" id="olympiad-search" placeholder="Поиск заданий..." class="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="olympiad-container" class="space-y-6"></div>
+                </div>
+                
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm mb-6">
+                        <h3 class="font-bold text-lg mb-4">Фильтры</h3>
+                        <div class="mb-6">
+                            <h4 class="font-bold text-sm mb-3 text-slate-600">Уровень сложности</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-level" value="base" checked>
+                                    <span class="ml-2">Базовый</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-level" value="advanced" checked>
+                                    <span class="ml-2">Повышенный</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-level" value="olympiad" checked>
+                                    <span class="text-sm font-bold text-red-600 ml-2">Олимпиадный</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h4 class="font-bold text-sm mb-3 text-slate-600">Тема</h4>
+                            <div id="theme-filters" class="space-y-2"></div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-sm mb-3 text-slate-600">Тип задания</h4>
+                            <div id="type-filters" class="space-y-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-type" value="single" checked>
+                                    <span class="ml-2">Один ответ</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-type" value="multiple" checked>
+                                    <span class="ml-2">Несколько ответов</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-type" value="matching" checked>
+                                    <span class="ml-2">Соответствие</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-type" value="text" checked>
+                                    <span class="ml-2">Текстовый ответ</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="filter-type" value="sequence" checked>
+                                    <span class="ml-2">Последовательность</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Статистика</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span>Пройдено заданий</span>
+                                    <span id="olympiad-done">0/20</span>
+                                </div>
+                                <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div id="olympiad-progress-bar" class="h-full bg-green-500 rounded-full" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-blue-50 p-4 rounded-xl">
+                                    <div class="text-2xl font-bold text-blue-600" id="correct-count">0</div>
+                                    <div class="text-xs font-bold text-blue-400 uppercase">Верно</div>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-xl">
+                                    <div class="text-2xl font-bold text-red-600" id="incorrect-count">0</div>
+                                    <div class="text-xs font-bold text-red-400 uppercase">Ошибки</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Глоссарий -->
+        <section id="view-glossary" class="view-section hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-black mb-2 font-serif">Глоссарий терминов</h2>
+                <p class="text-slate-500">100+ терминов с подробными определениями</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div class="relative w-full md:w-96">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="text" id="term-search" placeholder="Поиск по 100+ терминам..." class="w-full pl-10 pr-4 py-2 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="filterTermsByTheme('all')" class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-slate-50">Все</button>
+                    <button onclick="filterTermsByTheme('Человек')" class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-blue-50 text-blue-600">Человек</button>
+                    <button onclick="filterTermsByTheme('Общение')" class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-green-50 text-green-600">Общение</button>
+                    <button onclick="filterTermsByTheme('Государство')" class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-red-50 text-red-600">Государство</button>
+                    <button onclick="filterTermsByTheme('Культура')" class="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-purple-50 text-purple-600">Культура</button>
+                </div>
+            </div>
+            
+            <div id="glossary-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </section>
+
+        <!-- Прогресс и личный кабинет -->
+        <section id="view-progress" class="view-section hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-black mb-2 font-serif">Личный учебный план</h2>
+                <p class="text-slate-500">Ваш прогресс по темам и рекомендации для изучения</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm mb-6">
+                        <h3 class="font-bold text-lg mb-6">ВАШ ПРОГРЕСС</h3>
+                        <div id="progress-tree" class="space-y-6">
+                            <!-- Прогресс будет заполнен через JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Достижения</h3>
+                        <div id="achievements-container" class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <!-- Достижения будут заполнены через JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm mb-6">
+                        <h3 class="font-bold text-lg mb-4">Общая статистика</h3>
+                        <div class="space-y-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-blue-50 p-4 rounded-xl">
+                                    <div class="text-3xl font-bold text-blue-600" id="total-xp">0</div>
+                                    <div class="text-xs font-bold text-blue-400 uppercase">Опыт XP</div>
+                                </div>
+                                <div class="bg-emerald-50 p-4 rounded-xl">
+                                    <div class="text-3xl font-bold text-emerald-600" id="total-scenes">0</div>
+                                    <div class="text-xs font-bold text-emerald-400 uppercase">Сцены</div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-green-50 p-4 rounded-xl">
+                                    <div class="text-3xl font-bold text-green-600" id="correct-answers">0</div>
+                                    <div class="text-xs font-bold text-green-400 uppercase">Правильно</div>
+                                </div>
+                                <div class="bg-red-50 p-4 rounded-xl">
+                                    <div class="text-3xl font-bold text-red-600" id="incorrect-answers">0</div>
+                                    <div class="text-xs font-bold text-red-400 uppercase">Ошибки</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4">Рекомендации</h3>
+                        <div id="recommendations" class="space-y-3">
+                            <p class="text-slate-500 text-sm">Начните изучение для получения рекомендаций</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Интерактивные схемы -->
+        <section id="view-schemes" class="view-section hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-black mb-2 font-serif">Интерактивные схемы</h2>
+                <p class="text-slate-500">Наглядные материалы для лучшего понимания тем</p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                    <h3 class="font-bold text-lg mb-4">Структура деятельности</h3>
+                    <p class="text-slate-500 mb-6">Кликайте на элементы схемы для подробностей</p>
+                    
+                    <div class="relative">
+                        <!-- Схема структуры деятельности -->
+                        <div class="activity-scheme space-y-4">
+                            <div class="flex flex-col items-center">
+                                <div class="activity-step bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-bold mb-2 cursor-pointer hover:bg-blue-200 transition-colors" onclick="showActivityExample('need')">
+                                    Потребность
+                                </div>
+                                <div class="text-sm text-slate-500">Пример: Желание общаться с друзьями</div>
+                            </div>
+                            
+                            <div class="flex justify-center">
+                                <i class="fas fa-arrow-down text-blue-400 text-xl"></i>
+                            </div>
+                            
+                            <div class="flex flex-col items-center">
+                                <div class="activity-step bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-bold mb-2 cursor-pointer hover:bg-blue-200 transition-colors" onclick="showActivityExample('motive')">
+                                    Мотив
+                                </div>
+                                <div class="text-sm text-slate-500">Пример: Потребность в социальной поддержке</div>
+                            </div>
+                            
+                            <div class="flex justify-center">
+                                <i class="fas fa-arrow-down text-blue-400 text-xl"></i>
+                            </div>
+                            
+                            <div class="flex flex-col items-center">
+                                <div class="activity-step bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-bold mb-2 cursor-pointer hover:bg-blue-200 transition-colors" onclick="showActivityExample('goal')">
+                                    Цель
+                                </div>
+                                <div class="text-sm text-slate-500">Пример: Организовать встречу с друзьями</div>
+                            </div>
+                            
+                            <div class="flex justify-center">
+                                <i class="fas fa-arrow-down text-blue-400 text-xl"></i>
+                            </div>
+                            
+                            <div class="flex flex-col items-center">
+                                <div class="activity-step bg-blue-100 text-blue-700 px-6 py-3 rounded-lg font-bold mb-2 cursor-pointer hover:bg-blue-200 transition-colors" onclick="showActivityExample('action')">
+                                    Действие
+                                </div>
+                                <div class="text-sm text-slate-500">Пример: Отправить приглашения друзьям</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-2xl p-6 border shadow-sm">
+                    <h3 class="font-bold text-lg mb-4">Система государственной власти</h3>
+                    <p class="text-slate-500 mb-6">Кликайте на ветви власти для изучения</p>
+                    
+                    <div class="government-scheme space-y-6">
+                        <div class="text-center">
+                            <div class="text-xl font-bold text-red-600 mb-2">Глава государства</div>
+                            <div class="text-sm text-slate-500">Осуществляет общее руководство</div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="branch bg-red-50 p-4 rounded-lg cursor-pointer hover:bg-red-100 transition-colors" onclick="showBranchInfo('legislative')">
+                                <div class="text-center">
+                                    <i class="fas fa-balance-scale text-red-600 text-2xl mb-2"></i>
+                                    <div class="font-bold text-red-700">Законодательная власть</div>
+                                    <div class="text-xs text-slate-600 mt-1">Создает законы</div>
+                                </div>
+                            </div>
+                            
+                            <div class="branch bg-blue-50 p-4 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors" onclick="showBranchInfo('executive')">
+                                <div class="text-center">
+                                    <i class="fas fa-cogs text-blue-600 text-2xl mb-2"></i>
+                                    <div class="font-bold text-blue-700">Исполнительная власть</div>
+                                    <div class="text-xs text-slate-600 mt-1">Исполняет законы</div>
+                                </div>
+                            </div>
+                            
+                            <div class="branch bg-green-50 p-4 rounded-lg cursor-pointer hover:bg-green-100 transition-colors" onclick="showBranchInfo('judicial')">
+                                <div class="text-center">
+                                    <i class="fas fa-gavel text-green-600 text-2xl mb-2"></i>
+                                    <div class="font-bold text-green-700">Судебная власть</div>
+                                    <div class="text-xs text-slate-600 mt-1">Контролирует законы</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-6">
+                            <button onclick="showGovernmentTask()" class="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition-colors">
+                                <i class="fas fa-tasks mr-2"></i> Ситуационное задание
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <!-- Модальное окно (центрированное) -->
+    <!-- Модальное окно -->
     <div id="modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
-        <div class="bg-white rounded-[2rem] w-full max-w-md p-8 relative shadow-2xl max-h-[90vh] overflow-y-auto">
-            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
+        <div class="bg-white rounded-[2rem] w-full max-w-md p-8 relative shadow-2xl">
             <div id="modal-content"></div>
         </div>
     </div>
@@ -199,3 +507,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+[file content end]
