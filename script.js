@@ -151,7 +151,6 @@ function loadScene(sceneId) {
                 <span class="w-8 h-8 rounded-lg ${themeColor}-100 flex items-center justify-center text-sm font-bold ${themeColor}-600">${index+1}</span>
                 <div>
                     <div>${choice.text}</div>
-                    <div class="text-xs text-slate-400 mt-1">+${choice.xp} XP</div>
                 </div>
             </button>
         `).join('');
@@ -197,14 +196,13 @@ function makeChoice(choiceIndex) {
                 ${isCorrect ? '✅' : '❌'}
             </div>
             <h4 class="text-2xl font-bold mb-2">${isCorrect ? 'Правильно!' : 'Неправильно'}</h4>
-            <p class="text-slate-500 mb-6">Вы получили <span class="font-bold ${themeColor}-600">+${choice.xp} XP</span></p>
+            <p class="text-slate-500 mb-6">${isCorrect ? `Молодец! Ты правильно ответил.` : `Не совсем верно. Правильный ответ: ${scene.choices[scene.correctIndex].text}`}</p>
             
             <div class="bg-slate-50 rounded-xl p-4 mb-6 text-left">
-                <div class="font-bold text-sm mb-2">Обратная связь:</div>
+                <div class="font-bold text-sm mb-2">Объяснение:</div>
                 <div class="text-sm text-slate-600">
-                    <p class="mb-2">${isCorrect ? '✅' : '❌'} <span class="font-medium">${scene.programReq}</span> - ${isCorrect ? 'это требование программы выполнено' : 'нужно изучить эту тему лучше'}</p>
-                    <p>🎯 Проверяемые знания: ${scene.programReq}</p>
-                    ${isCorrect ? '' : '<p class="mt-2 text-red-600">Рекомендуем повторить эту тему</p>'}
+                    <p class="mb-2">${scene.programReq}</p>
+                    ${isCorrect ? '<p class="text-emerald-600">Вы хорошо усвоили этот материал!</p>' : '<p class="text-red-600">Рекомендуем повторить эту тему</p>'}
                 </div>
             </div>
             
@@ -238,15 +236,13 @@ function updateStoryProgress() {
 }
 
 function updateThemeProgress() {
-    // Пересчитать прогресс по темам на основе пройденных сцен
     if (!gameData || !gameData.scenes || !gameData.state) return;
     
-    // Сбросить счетчики тем
+    // Пересчитать прогресс по темам на основе пройденных сцен
     Object.keys(gameData.state.themeProgress).forEach(theme => {
         gameData.state.themeProgress[theme].completed = 0;
     });
     
-    // Пересчитать на основе пройденных сцен
     gameData.state.completedScenes.forEach(sceneId => {
         const scene = gameData.scenes.find(s => s.id === sceneId);
         if (scene && gameData.state.themeProgress[scene.theme]) {
@@ -305,6 +301,85 @@ function updateSceneInfo(scene) {
         `;
     }
 }
+
+// ... (остальные функции renderGlossary, filterTermsByTheme, renderOlympiadTasks и т.д. остаются без изменений)
+
+function renderProgress() {
+    if (!gameData) return;
+    
+    // Обновить статистику прогресса тем
+    updateThemeProgress();
+    
+    // Общая статистика
+    updateProgressStats();
+    
+    // Дерево прогресса
+    renderProgressTree();
+    
+    // Достижения
+    renderAchievements();
+    
+    // Рекомендации
+    renderRecommendations();
+}
+
+function updateProgressStats() {
+    const totalXp = document.getElementById('total-xp');
+    const totalScenes = document.getElementById('total-scenes');
+    const correctAnswers = document.getElementById('correct-answers');
+    const incorrectAnswers = document.getElementById('incorrect-answers');
+    
+    if (totalXp) totalXp.textContent = gameData.state.xp || 0;
+    if (totalScenes) totalScenes.textContent = (gameData.state.completedScenes || []).length;
+    if (correctAnswers) correctAnswers.textContent = gameData.state.correctAnswers || 0;
+    if (incorrectAnswers) incorrectAnswers.textContent = gameData.state.incorrectAnswers || 0;
+}
+
+function renderProgressTree() {
+    const progressTree = document.getElementById('progress-tree');
+    if (!progressTree) return;
+    
+    if (!gameData || !gameData.themes) {
+        progressTree.innerHTML = '<p class="text-slate-500">Данные о темах не загружены</p>';
+        return;
+    }
+    
+    progressTree.innerHTML = gameData.themes.map(theme => {
+        const progress = gameData.state.themeProgress[theme.title] || { completed: 0, total: 0, score: 0 };
+        const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+        
+        return `
+            <div class="border-l-4 border-${theme.color}-500 pl-4 mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="font-bold ${theme.color}-600">${theme.title}</div>
+                    <div class="text-sm font-bold ${theme.color}-600">${percent}%</div>
+                </div>
+                <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+                    <div class="h-full ${theme.color}-500 rounded-full" style="width: ${percent}%"></div>
+                </div>
+                <div class="text-sm text-slate-600 mb-2">
+                    ${progress.completed}/${progress.total} сцен завершено
+                </div>
+                <div class="text-sm text-slate-600 mb-2">
+                    ${progress.score} XP заработано
+                </div>
+                <div class="text-xs text-slate-500">
+                    Требования программы:
+                </div>
+                <ul class="text-xs text-slate-600 mt-1 space-y-1">
+                    ${theme.requirements.slice(0, 3).map(req => `
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-0.5"></i>
+                            <span>${req}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }).join('');
+}
+
+// ... (остальные функции без изменений)
 
 function renderGlossary() {
     const container = document.getElementById('glossary-container');
@@ -806,7 +881,6 @@ function renderProgressTree() {
         `;
     }).join('');
 }
-
 function renderAchievements() {
     const container = document.getElementById('achievements-container');
     if (!container) return;
