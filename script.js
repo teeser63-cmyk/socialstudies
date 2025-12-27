@@ -5,24 +5,47 @@ function switchMode(mode) {
     // Скрыть все секции
     document.getElementById('view-home').classList.add('hidden');
     ['story', 'olympiad', 'glossary', 'progress', 'schemes'].forEach(v => {
-        document.getElementById(`view-${v}`).classList.add('hidden');
+        const element = document.getElementById(`view-${v}`);
+        if (element) {
+            element.classList.add('hidden');
+        }
     });
     
     // Показать выбранную секцию
-    document.getElementById(`view-${mode}`).classList.remove('hidden');
+    const targetElement = document.getElementById(`view-${mode}`);
+    if (targetElement) {
+        targetElement.classList.remove('hidden');
+    }
     
     // Обновить навигацию
     ['story', 'olympiad', 'glossary', 'progress', 'schemes'].forEach(v => {
-        document.getElementById(`nav-${v}`).classList.remove('nav-active');
+        const navElement = document.getElementById(`nav-${v}`);
+        if (navElement) {
+            navElement.classList.remove('nav-active');
+        }
     });
-    document.getElementById(`nav-${mode}`).classList.add('nav-active');
+    
+    const activeNavElement = document.getElementById(`nav-${mode}`);
+    if (activeNavElement) {
+        activeNavElement.classList.add('nav-active');
+    }
     
     // Инициализировать контент
-    if (mode === 'glossary') renderGlossary();
-    if (mode === 'story') updateStoryProgress();
-    if (mode === 'olympiad') renderOlympiadTasks();
-    if (mode === 'progress') renderProgress();
-    if (mode === 'schemes') initSchemes();
+    if (mode === 'glossary') {
+        setTimeout(() => renderGlossary(), 100);
+    }
+    if (mode === 'story') {
+        setTimeout(() => updateStoryProgress(), 100);
+    }
+    if (mode === 'olympiad') {
+        setTimeout(() => renderOlympiadTasks(), 100);
+    }
+    if (mode === 'progress') {
+        setTimeout(() => renderProgress(), 100);
+    }
+    if (mode === 'schemes') {
+        setTimeout(() => initSchemes(), 100);
+    }
 }
 
 function startNewGame() {
@@ -43,7 +66,7 @@ function startNewGame() {
         };
         saveGameState();
         switchMode('story');
-        loadScene(gameData.state.currentScene);
+        setTimeout(() => loadScene(gameData.state.currentScene), 100);
     }
 }
 
@@ -68,6 +91,7 @@ function loadScene(sceneId) {
     }
     
     const container = document.getElementById('game-scene');
+    if (!container) return;
     
     // Обновить статистику темы
     if (!gameData.state.completedScenes.includes(scene.id)) {
@@ -109,16 +133,18 @@ function loadScene(sceneId) {
     
     // Показать кнопки выбора
     const choiceContainer = document.getElementById('choice-buttons');
-    choiceContainer.classList.remove('hidden');
-    choiceContainer.innerHTML = scene.choices.map((choice, index) => `
-        <button onclick="makeChoice(${index})" class="option-btn bg-white p-4 border rounded-2xl text-left font-medium flex items-center gap-3 hover:border-${getThemeColor(scene.theme)}-400 hover:shadow-sm transition-all">
-            <span class="w-8 h-8 rounded-lg ${getThemeColor(scene.theme)}-100 flex items-center justify-center text-sm font-bold ${getThemeColor(scene.theme)}-600">${index+1}</span>
-            <div>
-                <div>${choice.text}</div>
-                <div class="text-xs text-slate-400 mt-1">+${choice.xp} XP</div>
-            </div>
-        </button>
-    `).join('');
+    if (choiceContainer) {
+        choiceContainer.classList.remove('hidden');
+        choiceContainer.innerHTML = scene.choices.map((choice, index) => `
+            <button onclick="makeChoice(${index})" class="option-btn bg-white p-4 border rounded-2xl text-left font-medium flex items-center gap-3 hover:border-${getThemeColor(scene.theme)}-400 hover:shadow-sm transition-all">
+                <span class="w-8 h-8 rounded-lg ${getThemeColor(scene.theme)}-100 flex items-center justify-center text-sm font-bold ${getThemeColor(scene.theme)}-600">${index+1}</span>
+                <div>
+                    <div>${choice.text}</div>
+                    <div class="text-xs text-slate-400 mt-1">+${choice.xp} XP</div>
+                </div>
+            </button>
+        `).join('');
+    }
     
     // Обновить информацию о сцене
     updateSceneInfo(scene);
@@ -130,6 +156,8 @@ function loadScene(sceneId) {
 
 function makeChoice(choiceIndex) {
     const scene = gameData.scenes.find(s => s.id === gameData.state.currentScene);
+    if (!scene) return;
+    
     const choice = scene.choices[choiceIndex];
     const isCorrect = choiceIndex === scene.correctIndex;
     
@@ -174,10 +202,15 @@ function updateStoryProgress() {
     const completedScenes = gameData.state.completedScenes.length;
     const progressPercent = Math.round((completedScenes / totalScenes) * 100);
     
-    document.getElementById('story-progress').textContent = `${progressPercent}%`;
-    document.getElementById('story-progress-bar').style.width = `${progressPercent}%`;
-    document.getElementById('scene-count').textContent = completedScenes;
-    document.getElementById('xp-count').textContent = gameData.state.xp;
+    const progressElement = document.getElementById('story-progress');
+    const progressBar = document.getElementById('story-progress-bar');
+    const sceneCount = document.getElementById('scene-count');
+    const xpCount = document.getElementById('xp-count');
+    
+    if (progressElement) progressElement.textContent = `${progressPercent}%`;
+    if (progressBar) progressBar.style.width = `${progressPercent}%`;
+    if (sceneCount) sceneCount.textContent = completedScenes;
+    if (xpCount) xpCount.textContent = gameData.state.xp;
     
     // Обновить прогресс по темам
     const themeProgressContainer = document.getElementById('theme-progress');
@@ -240,6 +273,8 @@ function updateSceneInfo(scene) {
 
 function renderGlossary(data = gameData.glossary) {
     const container = document.getElementById('glossary-container');
+    if (!container) return;
+    
     container.innerHTML = data.map(item => `
         <div class="term-card bg-white p-5 rounded-2xl border-l-4 border-${getThemeColor(item.c)}-border">
             <div class="flex justify-between items-start mb-2">
@@ -256,15 +291,18 @@ function renderGlossary(data = gameData.glossary) {
     `).join('');
     
     // Настроить поиск
-    document.getElementById('term-search').oninput = function(e) {
-        const query = e.target.value.toLowerCase();
-        const filtered = gameData.glossary.filter(i => 
-            i.t.toLowerCase().includes(query) || 
-            i.d.toLowerCase().includes(query) ||
-            i.c.toLowerCase().includes(query)
-        );
-        renderGlossary(filtered);
-    };
+    const termSearch = document.getElementById('term-search');
+    if (termSearch) {
+        termSearch.oninput = function(e) {
+            const query = e.target.value.toLowerCase();
+            const filtered = gameData.glossary.filter(i => 
+                i.t.toLowerCase().includes(query) || 
+                i.d.toLowerCase().includes(query) ||
+                i.c.toLowerCase().includes(query)
+            );
+            renderGlossary(filtered);
+        };
+    }
 }
 
 function filterTermsByTheme(theme) {
@@ -278,6 +316,7 @@ function filterTermsByTheme(theme) {
 
 function renderOlympiadTasks() {
     const container = document.getElementById('olympiad-container');
+    if (!container) return;
     
     // Рассчитать статистику
     const completedTasks = Object.keys(gameData.state.olympiadResults).length;
@@ -286,10 +325,15 @@ function renderOlympiadTasks() {
     const incorrectCount = completedTasks - correctCount;
     
     // Обновить статистику
-    document.getElementById('olympiad-done').textContent = `${completedTasks}/${totalTasks}`;
-    document.getElementById('olympiad-progress-bar').style.width = `${(completedTasks / totalTasks) * 100}%`;
-    document.getElementById('correct-count').textContent = correctCount;
-    document.getElementById('incorrect-count').textContent = incorrectCount;
+    const doneElement = document.getElementById('olympiad-done');
+    const progressBar = document.getElementById('olympiad-progress-bar');
+    const correctElement = document.getElementById('correct-count');
+    const incorrectElement = document.getElementById('incorrect-count');
+    
+    if (doneElement) doneElement.textContent = `${completedTasks}/${totalTasks}`;
+    if (progressBar) progressBar.style.width = `${(completedTasks / totalTasks) * 100}%`;
+    if (correctElement) correctElement.textContent = correctCount;
+    if (incorrectElement) incorrectElement.textContent = incorrectCount;
     
     // Отобразить задания
     container.innerHTML = gameData.olympiadTasks.map(task => {
@@ -473,8 +517,10 @@ function checkOlympiadTask(taskId) {
     
     if (task.type === 'text') {
         const textarea = document.getElementById(`answer-${taskId}`);
-        userAnswer = textarea.value.trim().toLowerCase();
-        isCorrect = userAnswer === task.answer.toLowerCase();
+        if (textarea) {
+            userAnswer = textarea.value.trim().toLowerCase();
+            isCorrect = userAnswer === task.answer.toLowerCase();
+        }
     } 
     else if (task.type === 'single') {
         const selected = document.querySelector(`input[name="task-${taskId}"]:checked`);
@@ -500,13 +546,15 @@ function checkOlympiadTask(taskId) {
     }
     else if (task.type === 'sequence') {
         const container = document.getElementById(`sequence-${taskId}`);
-        const currentSequence = Array.from(container.children).map(el => 
-            el.textContent.replace('Перетащите', '').trim()
-        );
-        
-        // Сравниваем с правильной последовательностью
-        isCorrect = JSON.stringify(currentSequence) === JSON.stringify(task.sequence);
-        userAnswer = currentSequence;
+        if (container) {
+            const currentSequence = Array.from(container.children).map(el => 
+                el.textContent.replace('Перетащите', '').trim()
+            );
+            
+            // Сравниваем с правильной последовательностью
+            isCorrect = JSON.stringify(currentSequence) === JSON.stringify(task.sequence);
+            userAnswer = currentSequence;
+        }
     }
     
     // Сохранить результат
@@ -570,11 +618,16 @@ function initOlympiadFilters() {
     });
     
     // Поиск
-    document.getElementById('olympiad-search').oninput = filterOlympiadTasks;
+    const olympiadSearch = document.getElementById('olympiad-search');
+    if (olympiadSearch) {
+        olympiadSearch.oninput = filterOlympiadTasks;
+    }
 }
 
 function filterOlympiadTasks() {
-    const searchQuery = document.getElementById('olympiad-search').value.toLowerCase();
+    const searchInput = document.getElementById('olympiad-search');
+    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+    
     const selectedLevels = Array.from(document.querySelectorAll('.filter-level:checked')).map(c => c.value);
     const selectedThemes = Array.from(document.querySelectorAll('.filter-theme:checked')).map(c => c.value);
     const selectedTypes = Array.from(document.querySelectorAll('.filter-type:checked')).map(c => c.value);
@@ -628,130 +681,141 @@ function filterOlympiadTasks() {
 
 function renderProgress() {
     // Общая статистика
-    document.getElementById('total-xp').textContent = gameData.state.xp;
-    document.getElementById('total-scenes').textContent = gameData.state.completedScenes.length;
-    document.getElementById('correct-answers').textContent = gameData.state.correctAnswers;
-    document.getElementById('incorrect-answers').textContent = gameData.state.incorrectAnswers;
+    const totalXp = document.getElementById('total-xp');
+    const totalScenes = document.getElementById('total-scenes');
+    const correctAnswers = document.getElementById('correct-answers');
+    const incorrectAnswers = document.getElementById('incorrect-answers');
+    
+    if (totalXp) totalXp.textContent = gameData.state.xp;
+    if (totalScenes) totalScenes.textContent = gameData.state.completedScenes.length;
+    if (correctAnswers) correctAnswers.textContent = gameData.state.correctAnswers;
+    if (incorrectAnswers) incorrectAnswers.textContent = gameData.state.incorrectAnswers;
     
     // Дерево прогресса
     const progressTree = document.getElementById('progress-tree');
-    progressTree.innerHTML = gameData.themes.map(theme => {
-        const progress = gameData.state.themeProgress[theme.title];
-        const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
-        const scorePercent = progress.total > 0 ? Math.round((progress.score / (progress.total * 25)) * 100) : 0;
-        
-        let recommendations = '';
-        if (percent < 30) {
-            recommendations = `Начать изучение темы "${theme.title}"`;
-        } else if (percent < 60) {
-            recommendations = `Продолжить изучение темы "${theme.title}"`;
-        } else if (scorePercent < 70) {
-            recommendations = `Повторить ключевые понятия темы "${theme.title}"`;
-        } else if (scorePercent < 90) {
-            recommendations = `Закрепить знания по теме "${theme.title}" через олимпиадные задания`;
-        } else {
-            recommendations = `Тема "${theme.title}" усвоена отлично`;
-        }
-        
-        return `
-            <div class="border-l-4 border-${theme.color}-border pl-4">
-                <div class="flex justify-between items-center mb-2">
-                    <div class="font-bold ${theme.color}-600">${theme.title} ${percent >= 80 ? '✓' : ''}</div>
-                    <div class="text-sm font-bold ${theme.color}-600">${percent}%</div>
+    if (progressTree) {
+        progressTree.innerHTML = gameData.themes.map(theme => {
+            const progress = gameData.state.themeProgress[theme.title];
+            const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+            const scorePercent = progress.total > 0 ? Math.round((progress.score / (progress.total * 25)) * 100) : 0;
+            
+            let recommendations = '';
+            if (percent < 30) {
+                recommendations = `Начать изучение темы "${theme.title}"`;
+            } else if (percent < 60) {
+                recommendations = `Продолжить изучение темы "${theme.title}"`;
+            } else if (scorePercent < 70) {
+                recommendations = `Повторить ключевые понятия темы "${theme.title}"`;
+            } else if (scorePercent < 90) {
+                recommendations = `Закрепить знания по теме "${theme.title}" через олимпиадные задания`;
+            } else {
+                recommendations = `Тема "${theme.title}" усвоена отлично`;
+            }
+            
+            return `
+                <div class="border-l-4 border-${theme.color}-border pl-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="font-bold ${theme.color}-600">${theme.title} ${percent >= 80 ? '✓' : ''}</div>
+                        <div class="text-sm font-bold ${theme.color}-600">${percent}%</div>
+                    </div>
+                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+                        <div class="h-full ${theme.color}-500 rounded-full" style="width: ${percent}%"></div>
+                    </div>
+                    <div class="text-sm text-slate-600 pl-4">
+                        <div class="mb-1">└── ${recommendations}</div>
+                        <div class="text-xs text-slate-500">Прогресс: ${progress.completed}/${progress.total} сцен • ${progress.score} XP</div>
+                    </div>
                 </div>
-                <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
-                    <div class="h-full ${theme.color}-500 rounded-full" style="width: ${percent}%"></div>
-                </div>
-                <div class="text-sm text-slate-600 pl-4">
-                    <div class="mb-1">└── ${recommendations}</div>
-                    <div class="text-xs text-slate-500">Прогресс: ${progress.completed}/${progress.total} сцен • ${progress.score} XP</div>
-                </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
     
     // Достижения
     const achievementsContainer = document.getElementById('achievements-container');
-    achievementsContainer.innerHTML = gameData.achievements.map(ach => {
-        const earned = ach.earned || 
-            (ach.id === 1 && gameData.state.completedScenes.length > 0) ||
-            (ach.id === 2 && gameData.glossary.filter((t, idx) => idx < 50 && gameData.state.completedScenes.length > 10).length >= 50) ||
-            (ach.id === 3 && Object.keys(gameData.state.olympiadResults).length >= 10) ||
-            (ach.id === 4 && gameData.state.themeProgress['Человек'].completed >= 6) ||
-            (ach.id === 5 && gameData.state.themeProgress['Государство'].completed >= 6) ||
-            (ach.id === 6 && gameData.state.themeProgress['Культура'].completed >= 6) ||
-            (ach.id === 7 && gameData.state.themeProgress['Общение'].completed >= 6) ||
-            (ach.id === 8 && gameData.state.completedScenes.length >= 30);
-        
-        return `
-            <div class="text-center p-4 rounded-xl ${earned ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}">
-                <div class="text-2xl mb-2 ${earned ? 'text-yellow-500' : 'text-slate-300'}">
-                    <i class="${ach.icon}"></i>
+    if (achievementsContainer) {
+        achievementsContainer.innerHTML = gameData.achievements.map(ach => {
+            const earned = ach.earned || 
+                (ach.id === 1 && gameData.state.completedScenes.length > 0) ||
+                (ach.id === 2 && gameData.glossary.filter((t, idx) => idx < 50 && gameData.state.completedScenes.length > 10).length >= 50) ||
+                (ach.id === 3 && Object.keys(gameData.state.olympiadResults).length >= 10) ||
+                (ach.id === 4 && gameData.state.themeProgress['Человек'].completed >= 6) ||
+                (ach.id === 5 && gameData.state.themeProgress['Государство'].completed >= 6) ||
+                (ach.id === 6 && gameData.state.themeProgress['Культура'].completed >= 6) ||
+                (ach.id === 7 && gameData.state.themeProgress['Общение'].completed >= 6) ||
+                (ach.id === 8 && gameData.state.completedScenes.length >= 30);
+            
+            return `
+                <div class="text-center p-4 rounded-xl ${earned ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}">
+                    <div class="text-2xl mb-2 ${earned ? 'text-yellow-500' : 'text-slate-300'}">
+                        <i class="${ach.icon}"></i>
+                    </div>
+                    <div class="font-bold text-sm mb-1 ${earned ? 'text-slate-800' : 'text-slate-400'}">${ach.name}</div>
+                    <div class="text-xs ${earned ? 'text-slate-600' : 'text-slate-400'}">${ach.description}</div>
                 </div>
-                <div class="font-bold text-sm mb-1 ${earned ? 'text-slate-800' : 'text-slate-400'}">${ach.name}</div>
-                <div class="text-xs ${earned ? 'text-slate-600' : 'text-slate-400'}">${ach.description}</div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    }
     
     // Рекомендации
     const recommendationsContainer = document.getElementById('recommendations');
-    let recommendationsHTML = '';
-    
-    // Найти тему с наименьшим прогрессом
-    let minProgressTheme = null;
-    let minProgress = 100;
-    
-    gameData.themes.forEach(theme => {
-        const progress = gameData.state.themeProgress[theme.title];
-        const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+    if (recommendationsContainer) {
+        let recommendationsHTML = '';
         
-        if (percent < minProgress) {
-            minProgress = percent;
-            minProgressTheme = theme;
+        // Найти тему с наименьшим прогрессом
+        let minProgressTheme = null;
+        let minProgress = 100;
+        
+        gameData.themes.forEach(theme => {
+            const progress = gameData.state.themeProgress[theme.title];
+            const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+            
+            if (percent < minProgress) {
+                minProgress = percent;
+                minProgressTheme = theme;
+            }
+        });
+        
+        if (minProgressTheme && minProgress < 80) {
+            recommendationsHTML += `
+                <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                    <i class="fas fa-lightbulb text-blue-500 mt-1"></i>
+                    <div>
+                        <div class="font-bold text-sm mb-1">Рекомендуем изучить:</div>
+                        <div class="text-sm text-slate-600">Тему "${minProgressTheme.title}" (прогресс: ${minProgress}%)</div>
+                    </div>
+                </div>
+            `;
         }
-    });
-    
-    if (minProgressTheme && minProgress < 80) {
-        recommendationsHTML += `
-            <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                <i class="fas fa-lightbulb text-blue-500 mt-1"></i>
-                <div>
-                    <div class="font-bold text-sm mb-1">Рекомендуем изучить:</div>
-                    <div class="text-sm text-slate-600">Тему "${minProgressTheme.title}" (прогресс: ${minProgress}%)</div>
+        
+        // Рекомендация по олимпиадным заданиям
+        const olympiadProgress = Object.keys(gameData.state.olympiadResults).length;
+        if (olympiadProgress < 10) {
+            recommendationsHTML += `
+                <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                    <i class="fas fa-trophy text-green-500 mt-1"></i>
+                    <div>
+                        <div class="font-bold text-sm mb-1">Для подготовки к олимпиаде:</div>
+                        <div class="text-sm text-slate-600">Пройдите олимпиадный тренажер (выполнено ${olympiadProgress}/20)</div>
+                    </div>
                 </div>
-            </div>
-        `;
-    }
-    
-    // Рекомендация по олимпиадным заданиям
-    const olympiadProgress = Object.keys(gameData.state.olympiadResults).length;
-    if (olympiadProgress < 10) {
-        recommendationsHTML += `
-            <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                <i class="fas fa-trophy text-green-500 mt-1"></i>
-                <div>
-                    <div class="font-bold text-sm mb-1">Для подготовки к олимпиаде:</div>
-                    <div class="text-sm text-slate-600">Пройдите олимпиадный тренажер (выполнено ${olympiadProgress}/20)</div>
+            `;
+        }
+        
+        // Рекомендация по повторению
+        if (gameData.state.incorrectAnswers > gameData.state.correctAnswers * 0.3) {
+            recommendationsHTML += `
+                <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
+                    <i class="fas fa-redo text-red-500 mt-1"></i>
+                    <div>
+                        <div class="font-bold text-sm mb-1">Рекомендуем повторить:</div>
+                        <div class="text-sm text-slate-600">Темы, в которых было много ошибок (ошибок: ${gameData.state.incorrectAnswers})</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
+        
+        recommendationsContainer.innerHTML = recommendationsHTML || '<p class="text-slate-500 text-sm">Все темы изучены хорошо! Попробуйте олимпиадные задания повышенной сложности.</p>';
     }
-    
-    // Рекомендация по повторению
-    if (gameData.state.incorrectAnswers > gameData.state.correctAnswers * 0.3) {
-        recommendationsHTML += `
-            <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-                <i class="fas fa-redo text-red-500 mt-1"></i>
-                <div>
-                    <div class="font-bold text-sm mb-1">Рекомендуем повторить:</div>
-                    <div class="text-sm text-slate-600">Темы, в которых было много ошибок (ошибок: ${gameData.state.incorrectAnswers})</div>
-                </div>
-            </div>
-        `;
-    }
-    
-    recommendationsContainer.innerHTML = recommendationsHTML || '<p class="text-slate-500 text-sm">Все темы изучены хорошо! Попробуйте олимпиадные задания повышенной сложности.</p>';
 }
 
 function initSchemes() {
@@ -869,6 +933,8 @@ function checkGovernmentTask() {
     const selected = document.querySelector('input[name="gov-task"]:checked');
     const feedback = document.getElementById('gov-task-feedback');
     
+    if (!feedback) return;
+    
     if (selected && selected.value === '2') {
         feedback.classList.remove('hidden');
         feedback.querySelector('.text-green-600').textContent = 
@@ -905,47 +971,50 @@ function getTaskLevelColor(level) {
 }
 
 function showModal(html) {
-    document.getElementById('modal-content').innerHTML = html;
+    const modalContent = document.getElementById('modal-content');
     const modal = document.getElementById('modal');
+    
+    if (!modalContent || !modal) return;
+    
+    modalContent.innerHTML = html;
     modal.classList.remove('hidden');
-    // Центрирование модального окна
     modal.style.display = 'flex';
     modal.style.alignItems = 'center';
     modal.style.justifyContent = 'center';
 }
 
 function closeModal() {
-    document.getElementById('modal').classList.add('hidden');
     const modal = document.getElementById('modal');
-    modal.style.display = 'none';
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
 }
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализировать глоссарий
-    renderGlossary();
+    // Загрузить состояние игры
+    loadGameState();
     
-    // Инициализировать фильтры для олимпиадных заданий
+    // Установить обработчик поиска для глоссария
+    const termSearch = document.getElementById('term-search');
+    if (termSearch) {
+        termSearch.oninput = function(e) {
+            const query = e.target.value.toLowerCase();
+            const filtered = gameData.glossary.filter(i => 
+                i.t.toLowerCase().includes(query) || 
+                i.d.toLowerCase().includes(query) ||
+                i.c.toLowerCase().includes(query)
+            );
+            renderGlossary(filtered);
+        };
+    }
+    
+    // Обновить прогресс (только если на главной странице)
     setTimeout(() => {
-        if (document.getElementById('theme-filters')) {
-            initOlympiadFilters();
-        }
-    }, 100);
-    
-    // Обновить прогресс
-    updateStoryProgress();
-    renderProgress();
-    
-    // Установить обработчики поиска
-    document.getElementById('term-search').oninput = function(e) {
-        const query = e.target.value.toLowerCase();
-        const filtered = gameData.glossary.filter(i => 
-            i.t.toLowerCase().includes(query) || 
-            i.d.toLowerCase().includes(query) ||
-            i.c.toLowerCase().includes(query)
-        );
-        renderGlossary(filtered);
-    };
+        updateStoryProgress();
+        renderProgress();
+    }, 500);
 });
 
 // Глобальные функции для HTML
