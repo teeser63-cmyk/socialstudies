@@ -1,28 +1,21 @@
-[file name]: script.js
-[file content begin]
 // Основные функции игры
 function switchMode(mode) {
+    console.log('Переключение на режим:', mode);
+    
     // Скрыть все секции
-    document.getElementById('view-home').classList.add('hidden');
-    ['story', 'olympiad', 'glossary', 'progress', 'schemes'].forEach(v => {
-        const element = document.getElementById(`view-${v}`);
-        if (element) {
-            element.classList.add('hidden');
-        }
+    document.querySelectorAll('.view-section').forEach(section => {
+        section.style.display = 'none';
     });
     
     // Показать выбранную секцию
     const targetElement = document.getElementById(`view-${mode}`);
     if (targetElement) {
-        targetElement.classList.remove('hidden');
+        targetElement.style.display = 'block';
     }
     
     // Обновить навигацию
-    ['story', 'olympiad', 'glossary', 'progress', 'schemes'].forEach(v => {
-        const navElement = document.getElementById(`nav-${v}`);
-        if (navElement) {
-            navElement.classList.remove('nav-active');
-        }
+    document.querySelectorAll('nav button').forEach(btn => {
+        btn.classList.remove('nav-active');
     });
     
     const activeNavElement = document.getElementById(`nav-${mode}`);
@@ -31,20 +24,22 @@ function switchMode(mode) {
     }
     
     // Инициализировать контент
-    if (mode === 'glossary') {
-        setTimeout(() => renderGlossary(), 100);
-    }
-    if (mode === 'story') {
-        setTimeout(() => updateStoryProgress(), 100);
-    }
-    if (mode === 'olympiad') {
-        setTimeout(() => renderOlympiadTasks(), 100);
-    }
-    if (mode === 'progress') {
-        setTimeout(() => renderProgress(), 100);
-    }
-    if (mode === 'schemes') {
-        setTimeout(() => initSchemes(), 100);
+    switch(mode) {
+        case 'glossary':
+            renderGlossary();
+            break;
+        case 'story':
+            updateStoryProgress();
+            break;
+        case 'olympiad':
+            renderOlympiadTasks();
+            break;
+        case 'progress':
+            renderProgress();
+            break;
+        case 'home':
+            // Главная страница уже видна
+            break;
     }
 }
 
@@ -52,7 +47,7 @@ function startNewGame() {
     if (confirm("Начать новую игру? Текущий прогресс будет сброшен.")) {
         gameData.state = {
             xp: 0,
-            currentScene: 1, // Начинаем с первой сцены
+            currentScene: 1,
             completedScenes: [],
             correctAnswers: 0,
             incorrectAnswers: 0,
@@ -66,43 +61,59 @@ function startNewGame() {
         };
         saveGameState();
         switchMode('story');
-        setTimeout(() => loadScene(gameData.state.currentScene), 100);
+        setTimeout(() => {
+            if (gameData && gameData.scenes) {
+                loadScene(gameData.state.currentScene);
+            }
+        }, 100);
     }
 }
 
 function loadNextScene() {
-    if (gameData.state.currentScene < gameData.scenes.length) {
-        gameData.state.currentScene++;
-    } else {
-        // Если прошли все сцены, начинаем сначала
-        gameData.state.currentScene = 1;
+    if (!gameData || !gameData.scenes) return;
+    
+    let nextSceneId = gameData.state.currentScene + 1;
+    if (nextSceneId > gameData.scenes.length) {
+        nextSceneId = 1;
     }
     
-    loadScene(gameData.state.currentScene);
+    gameData.state.currentScene = nextSceneId;
+    loadScene(nextSceneId);
 }
 
 function loadScene(sceneId) {
+    console.log('Загрузка сцены:', sceneId);
+    
+    if (!gameData || !gameData.scenes) {
+        console.error('gameData не загружен');
+        return;
+    }
+    
     const scene = gameData.scenes.find(s => s.id === sceneId);
     if (!scene) {
-        // Если сцена не найдена, показываем первую
-        gameData.state.currentScene = 1;
-        loadScene(1);
+        console.error('Сцена не найдена:', sceneId);
         return;
     }
     
     const container = document.getElementById('game-scene');
     if (!container) return;
     
-    // Обновить статистику темы
+    const themeColor = getThemeColor(scene.theme);
+    
+    // Обновить прогресс темы при загрузке сцены
     if (!gameData.state.completedScenes.includes(scene.id)) {
-        gameData.state.themeProgress[scene.theme].completed++;
+        if (gameData.state.themeProgress[scene.theme]) {
+            // Увеличиваем completed только если сцена этой темы
+            gameData.state.themeProgress[scene.theme].completed++;
+        }
         gameData.state.completedScenes.push(scene.id);
     }
     
+    // Отображаем сцену
     container.innerHTML = `
         <div class="mb-6">
             <div class="flex justify-between items-start mb-2">
-                <span class="text-xs font-bold px-3 py-1 rounded-full ${getThemeColor(scene.theme)}-100 ${getThemeColor(scene.theme)}-600">Сцена ${scene.id}/30</span>
+                <span class="text-xs font-bold px-3 py-1 rounded-full ${themeColor}-100 ${themeColor}-600">Сцена ${scene.id}/30</span>
                 <span class="text-xs font-bold text-slate-500">${scene.theme}</span>
             </div>
             <h3 class="text-2xl font-bold mb-4">${scene.title}</h3>
@@ -110,7 +121,7 @@ function loadScene(sceneId) {
             
             <div class="bg-slate-50 rounded-xl p-5 mb-6">
                 <div class="flex items-start gap-3">
-                    <i class="fas fa-graduation-cap ${getThemeColor(scene.theme)}-500 mt-1"></i>
+                    <i class="fas fa-graduation-cap ${themeColor}-500 mt-1"></i>
                     <div>
                         <div class="font-bold text-sm mb-1">Проверяемые знания:</div>
                         <div class="text-sm text-slate-600">${scene.programReq}</div>
@@ -118,13 +129,13 @@ function loadScene(sceneId) {
                 </div>
             </div>
             
-            <div class="bg-${getThemeColor(scene.theme)}-50 rounded-xl p-5">
+            <div class="bg-${themeColor}-50 rounded-xl p-5">
                 <div class="flex items-start gap-3">
-                    <i class="fas fa-trophy ${getThemeColor(scene.theme)}-500 mt-1"></i>
+                    <i class="fas fa-trophy ${themeColor}-500 mt-1"></i>
                     <div>
                         <div class="font-bold text-sm mb-1">Связь с олимпиадой:</div>
                         <div class="text-sm text-slate-600">${scene.olympiadRef}</div>
-                        <div class="text-xs ${getThemeColor(scene.theme)}-500 mt-2">Этот вопрос проверяет знания для олимпиады</div>
+                        <div class="text-xs ${themeColor}-500 mt-2">Этот вопрос проверяет знания для олимпиады</div>
                     </div>
                 </div>
             </div>
@@ -134,10 +145,10 @@ function loadScene(sceneId) {
     // Показать кнопки выбора
     const choiceContainer = document.getElementById('choice-buttons');
     if (choiceContainer) {
-        choiceContainer.classList.remove('hidden');
+        choiceContainer.style.display = 'grid';
         choiceContainer.innerHTML = scene.choices.map((choice, index) => `
-            <button onclick="makeChoice(${index})" class="option-btn bg-white p-4 border rounded-2xl text-left font-medium flex items-center gap-3 hover:border-${getThemeColor(scene.theme)}-400 hover:shadow-sm transition-all">
-                <span class="w-8 h-8 rounded-lg ${getThemeColor(scene.theme)}-100 flex items-center justify-center text-sm font-bold ${getThemeColor(scene.theme)}-600">${index+1}</span>
+            <button onclick="makeChoice(${index})" class="option-btn bg-white p-4 border rounded-2xl text-left font-medium flex items-center gap-3 hover:border-${themeColor}-400 hover:shadow-sm transition-all">
+                <span class="w-8 h-8 rounded-lg ${themeColor}-100 flex items-center justify-center text-sm font-bold ${themeColor}-600">${index+1}</span>
                 <div>
                     <div>${choice.text}</div>
                     <div class="text-xs text-slate-400 mt-1">+${choice.xp} XP</div>
@@ -155,15 +166,22 @@ function loadScene(sceneId) {
 }
 
 function makeChoice(choiceIndex) {
+    console.log('Выбор варианта:', choiceIndex);
+    
+    if (!gameData || !gameData.scenes) return;
+    
     const scene = gameData.scenes.find(s => s.id === gameData.state.currentScene);
     if (!scene) return;
     
     const choice = scene.choices[choiceIndex];
     const isCorrect = choiceIndex === scene.correctIndex;
+    const themeColor = getThemeColor(scene.theme);
     
     // Начислить опыт
     gameData.state.xp += choice.xp;
-    gameData.state.themeProgress[scene.theme].score += choice.xp;
+    if (gameData.state.themeProgress[scene.theme]) {
+        gameData.state.themeProgress[scene.theme].score += choice.xp;
+    }
     
     // Обновить статистику ответов
     if (isCorrect) {
@@ -179,7 +197,7 @@ function makeChoice(choiceIndex) {
                 ${isCorrect ? '✅' : '❌'}
             </div>
             <h4 class="text-2xl font-bold mb-2">${isCorrect ? 'Правильно!' : 'Неправильно'}</h4>
-            <p class="text-slate-500 mb-6">Вы получили <span class="font-bold ${getThemeColor(scene.theme)}-600">+${choice.xp} XP</span></p>
+            <p class="text-slate-500 mb-6">Вы получили <span class="font-bold ${themeColor}-600">+${choice.xp} XP</span></p>
             
             <div class="bg-slate-50 rounded-xl p-4 mb-6 text-left">
                 <div class="font-bold text-sm mb-2">Обратная связь:</div>
@@ -190,7 +208,7 @@ function makeChoice(choiceIndex) {
                 </div>
             </div>
             
-            <button onclick="closeModal(); loadNextScene();" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
+            <button onclick="closeModal(); setTimeout(() => loadNextScene(), 100);" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
                 СЛЕДУЮЩАЯ СЦЕНА
             </button>
         </div>
@@ -198,10 +216,13 @@ function makeChoice(choiceIndex) {
 }
 
 function updateStoryProgress() {
+    if (!gameData || !gameData.scenes) return;
+    
     const totalScenes = gameData.scenes.length;
     const completedScenes = gameData.state.completedScenes.length;
     const progressPercent = Math.round((completedScenes / totalScenes) * 100);
     
+    // Обновить элементы на странице
     const progressElement = document.getElementById('story-progress');
     const progressBar = document.getElementById('story-progress-bar');
     const sceneCount = document.getElementById('scene-count');
@@ -213,17 +234,41 @@ function updateStoryProgress() {
     if (xpCount) xpCount.textContent = gameData.state.xp;
     
     // Обновить прогресс по темам
+    updateThemeProgress();
+}
+
+function updateThemeProgress() {
+    // Пересчитать прогресс по темам на основе пройденных сцен
+    if (!gameData || !gameData.scenes || !gameData.state) return;
+    
+    // Сбросить счетчики тем
+    Object.keys(gameData.state.themeProgress).forEach(theme => {
+        gameData.state.themeProgress[theme].completed = 0;
+    });
+    
+    // Пересчитать на основе пройденных сцен
+    gameData.state.completedScenes.forEach(sceneId => {
+        const scene = gameData.scenes.find(s => s.id === sceneId);
+        if (scene && gameData.state.themeProgress[scene.theme]) {
+            gameData.state.themeProgress[scene.theme].completed++;
+        }
+    });
+    
+    // Обновить отображение прогресса тем
     const themeProgressContainer = document.getElementById('theme-progress');
     if (themeProgressContainer) {
         themeProgressContainer.innerHTML = Object.entries(gameData.state.themeProgress).map(([theme, progress]) => {
+            const themeColor = getThemeColor(theme);
             const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
             return `
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium ${getThemeColor(theme)}-600">${theme}</span>
-                    <span class="text-sm font-bold">${percent}%</span>
-                </div>
-                <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
-                    <div class="h-full ${getThemeColor(theme)}-500 rounded-full" style="width: ${percent}%"></div>
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm font-medium ${themeColor}-600">${theme}</span>
+                        <span class="text-sm font-bold">${percent}% (${progress.completed}/${progress.total})</span>
+                    </div>
+                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <div class="h-full ${themeColor}-500 rounded-full" style="width: ${percent}%"></div>
+                    </div>
                 </div>
             `;
         }).join('');
@@ -233,720 +278,683 @@ function updateStoryProgress() {
 function updateSceneInfo(scene) {
     const container = document.getElementById('scene-info');
     if (container) {
+        const themeColor = getThemeColor(scene.theme);
+        const themeProgress = gameData.state.themeProgress[scene.theme] || { completed: 0, total: 0, score: 0 };
+        const percent = themeProgress.total > 0 ? Math.round((themeProgress.completed / themeProgress.total) * 100) : 0;
+        
         container.innerHTML = `
             <div class="space-y-4">
                 <div>
                     <div class="font-bold text-sm mb-1">Тема:</div>
-                    <div class="text-sm ${getThemeColor(scene.theme)}-600 font-medium">${scene.theme}</div>
+                    <div class="text-sm ${themeColor}-600 font-medium">${scene.theme}</div>
                 </div>
                 <div>
                     <div class="font-bold text-sm mb-1">Прогресс по теме:</div>
                     <div class="text-sm text-slate-600">
-                        ${gameData.state.themeProgress[scene.theme].completed}/${gameData.state.themeProgress[scene.theme].total} сцен
+                        ${themeProgress.completed}/${themeProgress.total} сцен (${percent}%)
+                    </div>
+                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden mt-1">
+                        <div class="h-full ${themeColor}-500 rounded-full" style="width: ${percent}%"></div>
                     </div>
                 </div>
                 <div>
                     <div class="font-bold text-sm mb-1">Опыт по теме:</div>
-                    <div class="text-sm text-slate-600">${gameData.state.themeProgress[scene.theme].score} XP</div>
-                </div>
-            </div>
-        `;
-    }
-    
-    const hintsContainer = document.getElementById('hints');
-    if (hintsContainer) {
-        hintsContainer.innerHTML = `
-            <div class="space-y-3">
-                <div class="text-sm text-slate-600">
-                    <span class="font-bold">Подсказка:</span> Внимательно читайте вопрос и все варианты ответов
-                </div>
-                <div class="text-sm text-slate-600">
-                    <span class="font-bold">Совет:</span> Выбирайте наиболее полные и точные ответы
-                </div>
-                <div class="text-sm text-slate-600">
-                    <span class="font-bold">Важно:</span> После ответа вы получите подробную обратную связь
+                    <div class="text-sm text-slate-600">${themeProgress.score} XP</div>
                 </div>
             </div>
         `;
     }
 }
 
-function renderGlossary(data = gameData.glossary) {
+function renderGlossary() {
     const container = document.getElementById('glossary-container');
     if (!container) return;
     
-    container.innerHTML = data.map(item => `
-        <div class="term-card bg-white p-5 rounded-2xl border-l-4 border-${getThemeColor(item.c)}-border">
-            <div class="flex justify-between items-start mb-2">
-                <span class="text-lg font-bold ${getThemeColor(item.c)}-600">${item.t}</span>
-                <div class="flex flex-col items-end">
-                    <span class="text-[10px] px-2 py-0.5 ${getThemeColor(item.c)}-100 rounded-full font-bold ${getThemeColor(item.c)}-600 uppercase mb-1">${item.c}</span>
+    if (!gameData || !gameData.glossary) {
+        container.innerHTML = '<p class="text-slate-500">Глоссарий не загружен</p>';
+        return;
+    }
+    
+    container.innerHTML = gameData.glossary.map(item => {
+        const themeColor = getThemeColor(item.c);
+        return `
+            <div class="term-card bg-white p-5 rounded-2xl border-l-4 border-${themeColor}-500">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-lg font-bold ${themeColor}-600">${item.t}</span>
+                    <div class="flex flex-col items-end">
+                        <span class="text-[10px] px-2 py-0.5 ${themeColor}-100 rounded-full font-bold ${themeColor}-600 uppercase mb-1">${item.c}</span>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-600 leading-relaxed mb-3">${item.d}</p>
+                <div class="text-xs text-slate-400 flex items-center">
+                    <i class="fas fa-tag mr-1"></i> ${item.c}
                 </div>
             </div>
-            <p class="text-sm text-slate-600 leading-relaxed mb-3">${item.d}</p>
-            <div class="text-xs text-slate-400 flex items-center">
-                <i class="fas fa-tag mr-1"></i> ${item.c}
-            </div>
-        </div>
-    `).join('');
-    
-    // Настроить поиск
-    const termSearch = document.getElementById('term-search');
-    if (termSearch) {
-        termSearch.oninput = function(e) {
-            const query = e.target.value.toLowerCase();
-            const filtered = gameData.glossary.filter(i => 
-                i.t.toLowerCase().includes(query) || 
-                i.d.toLowerCase().includes(query) ||
-                i.c.toLowerCase().includes(query)
-            );
-            renderGlossary(filtered);
-        };
-    }
+        `;
+    }).join('');
 }
 
 function filterTermsByTheme(theme) {
+    if (!gameData || !gameData.glossary) return;
+    
+    const container = document.getElementById('glossary-container');
+    if (!container) return;
+    
     if (theme === 'all') {
         renderGlossary();
     } else {
         const filtered = gameData.glossary.filter(i => i.c === theme);
-        renderGlossary(filtered);
+        container.innerHTML = filtered.map(item => {
+            const themeColor = getThemeColor(item.c);
+            return `
+                <div class="term-card bg-white p-5 rounded-2xl border-l-4 border-${themeColor}-500">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-lg font-bold ${themeColor}-600">${item.t}</span>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[10px] px-2 py-0.5 ${themeColor}-100 rounded-full font-bold ${themeColor}-600 uppercase mb-1">${item.c}</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">${item.d}</p>
+                    <div class="text-xs text-slate-400 flex items-center">
+                        <i class="fas fa-tag mr-1"></i> ${item.c}
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 }
 
-function renderOlympiadTasks() {
+// Переменная для хранения отфильтрованных заданий
+let filteredOlympiadTasks = [];
+
+function renderOlympiadTasks(tasks = null) {
     const container = document.getElementById('olympiad-container');
-    if (!container) return;
+    if (!container) {
+        console.error('Контейнер для олимпиадных заданий не найден');
+        return;
+    }
+    
+    if (!gameData || !gameData.olympiadTasks) {
+        container.innerHTML = '<p class="text-slate-500">Олимпиадные задания не загружены</p>';
+        return;
+    }
+    
+    // Используем переданные задачи или все задачи
+    const tasksToRender = tasks || gameData.olympiadTasks;
+    filteredOlympiadTasks = tasksToRender;
+    
+    // Инициализация фильтров тем при первом рендере
+    initThemeFilters();
     
     // Рассчитать статистику
-    const completedTasks = Object.keys(gameData.state.olympiadResults).length;
+    const completedTasks = Object.keys(gameData.state.olympiadResults || {}).length;
     const totalTasks = gameData.olympiadTasks.length;
-    const correctCount = Object.values(gameData.state.olympiadResults).filter(r => r.correct).length;
-    const incorrectCount = completedTasks - correctCount;
+    const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
     
     // Обновить статистику
-    const doneElement = document.getElementById('olympiad-done');
-    const progressBar = document.getElementById('olympiad-progress-bar');
-    const correctElement = document.getElementById('correct-count');
-    const incorrectElement = document.getElementById('incorrect-count');
-    
-    if (doneElement) doneElement.textContent = `${completedTasks}/${totalTasks}`;
-    if (progressBar) progressBar.style.width = `${(completedTasks / totalTasks) * 100}%`;
-    if (correctElement) correctElement.textContent = correctCount;
-    if (incorrectElement) incorrectElement.textContent = incorrectCount;
+    updateOlympiadStats(completedTasks, totalTasks, progressPercent);
     
     // Отобразить задания
-    container.innerHTML = gameData.olympiadTasks.map(task => {
-        const userResult = gameData.state.olympiadResults[task.id];
+    container.innerHTML = tasksToRender.map(task => {
+        const userResult = (gameData.state.olympiadResults || {})[task.id];
         const isCompleted = !!userResult;
+        const themeColor = getThemeColor(task.theme);
+        const levelColor = getTaskLevelColor(task.level);
+        const levelText = {
+            'base': 'Базовый',
+            'advanced': 'Повышенный',
+            'olympiad': 'Олимпиадный'
+        }[task.level] || task.level;
         
-        let taskContent = '';
+        // Определяем тип вопроса и отображаем соответствующую форму
+        let questionForm = '';
         
-        if (task.type === 'text') {
-            taskContent = `
-                <div class="mb-4">
-                    <textarea id="answer-${task.id}" placeholder="Введите ваш ответ здесь..." class="w-full p-3 border rounded-xl h-32 resize-none" ${isCompleted ? 'disabled' : ''}>${isCompleted ? userResult.answer : ''}</textarea>
-                </div>
-            `;
-        } else if (task.type === 'matching') {
-            taskContent = `
-                <div class="mb-4">
-                    <div class="text-sm text-slate-600 mb-3">Установите соответствие:</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="space-y-2">
-                            ${task.matching.items.map(item => `<div class="p-2 bg-slate-50 rounded">${item}</div>`).join('')}
-                        </div>
-                        <div class="space-y-2">
-                            ${task.matching.options.map((opt, idx) => `
-                                <div class="p-2 border rounded">
-                                    <label class="flex items-center">
-                                        <input type="radio" name="match-${task.id}" value="${opt.charAt(0)}" class="mr-2" ${isCompleted ? 'disabled' : ''}>
-                                        ${opt}
-                                    </label>
+        switch(task.type) {
+            case 'multiple':
+                questionForm = `
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-slate-700 mb-2">Выберите несколько правильных ответов:</p>
+                        ${task.options.map((opt, idx) => `
+                            <div class="flex items-center p-3 border rounded-lg mb-2 hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" 
+                                       name="task-${task.id}" 
+                                       value="${idx}" 
+                                       class="mr-3 h-4 w-4"
+                                       id="task-${task.id}-${idx}">
+                                <label for="task-${task.id}-${idx}" class="flex-1 cursor-pointer">${opt}</label>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+                
+            case 'matching':
+                questionForm = `
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-slate-700 mb-2">Установите соответствие:</p>
+                        ${task.options.map((opt, idx) => `
+                            <div class="flex items-center p-3 border rounded-lg mb-2">
+                                <span class="w-8 h-8 rounded-lg ${themeColor}-100 flex items-center justify-center text-sm font-bold ${themeColor}-600 mr-3">${idx+1}</span>
+                                <span class="flex-1">${opt}</span>
+                                <select class="ml-3 p-1 border rounded" id="match-${task.id}-${idx}">
+                                    <option value="">Выберите</option>
+                                    <option value="A">А</option>
+                                    <option value="B">Б</option>
+                                    <option value="C">В</option>
+                                    <option value="D">Г</option>
+                                </select>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                break;
+                
+            case 'sequence':
+                questionForm = `
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-slate-700 mb-2">Установите правильную последовательность:</p>
+                        <div class="space-y-2" id="sortable-${task.id}">
+                            ${task.options.map((opt, idx) => `
+                                <div class="flex items-center p-3 border rounded-lg bg-white cursor-move draggable-item" data-value="${idx}">
+                                    <i class="fas fa-bars text-slate-400 mr-3"></i>
+                                    <span>${opt}</span>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                </div>
-            `;
-        } else if (task.type === 'sequence') {
-            taskContent = `
-                <div class="mb-4">
-                    <div class="text-sm text-slate-600 mb-3">Расставьте в правильной последовательности:</div>
-                    <div id="sequence-${task.id}" class="space-y-2">
-                        ${task.sequence.map((item, idx) => `
-                            <div class="p-3 border rounded-lg cursor-move bg-white">
-                                <div class="flex items-center justify-between">
-                                    <span>${item}</span>
-                                    <span class="text-slate-400 text-sm">Перетащите</span>
-                                </div>
+                `;
+                break;
+                
+            case 'text':
+                questionForm = `
+                    <div class="mb-4">
+                        <p class="text-sm font-medium text-slate-700 mb-2">Введите ответ:</p>
+                        <textarea id="text-answer-${task.id}" 
+                                  class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-${themeColor}-500 outline-none" 
+                                  rows="3" 
+                                  placeholder="Введите ваш ответ...">${userResult?.userAnswer || ''}</textarea>
+                    </div>
+                `;
+                break;
+                
+            default: // single (по умолчанию)
+                questionForm = `
+                    <div class="mb-4">
+                        ${task.options.map((opt, idx) => `
+                            <div class="flex items-center p-3 border rounded-lg mb-2 hover:bg-slate-50 cursor-pointer">
+                                <input type="radio" 
+                                       name="task-${task.id}" 
+                                       value="${idx}" 
+                                       class="mr-3 h-4 w-4"
+                                       id="task-${task.id}-${idx}"
+                                       ${userResult && userResult.userAnswer && userResult.userAnswer.includes(idx) ? 'checked' : ''}>
+                                <label for="task-${task.id}-${idx}" class="flex-1 cursor-pointer">${opt}</label>
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            `;
-        } else {
-            taskContent = `
-                <div class="space-y-2 mb-4">
-                    ${task.options.map((opt, idx) => `
-                        <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50 ${isCompleted ? 'opacity-75' : ''}">
-                            <input type="${task.type === 'multiple' ? 'checkbox' : 'radio'}" name="task-${task.id}" value="${idx}" class="mr-3" ${isCompleted ? 'disabled' : ''}>
-                            <span>${opt}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            `;
+                `;
         }
         
         return `
-            <div class="bg-white rounded-2xl p-6 border shadow-sm">
+            <div class="bg-white rounded-2xl p-6 border shadow-sm mb-4" id="task-${task.id}">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                    <div>
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="text-xs font-bold px-3 py-1 rounded-full ${getTaskLevelColor(task.level)}-100 ${getTaskLevelColor(task.level)}-600">${task.level === 'base' ? 'Базовый' : task.level === 'advanced' ? 'Повышенный' : 'Олимпиадный'}</span>
-                            <span class="text-xs font-bold px-3 py-1 rounded-full ${getThemeColor(task.theme)}-100 ${getThemeColor(task.theme)}-600">${task.theme}</span>
-                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">${getTaskTypeName(task.type)}</span>
-                            ${isCompleted ? `
-                                <span class="text-xs font-bold px-3 py-1 rounded-full ${userResult.correct ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
-                                    ${userResult.correct ? '✓ Верно' : '✗ Ошибка'}
-                                </span>
-                            ` : ''}
+                    <div class="w-full">
+                        <div class="flex items-center gap-3 mb-2 flex-wrap">
+                            <span class="text-xs font-bold px-3 py-1 rounded-full ${levelColor}-100 ${levelColor}-600">${levelText}</span>
+                            <span class="text-xs font-bold px-3 py-1 rounded-full ${themeColor}-100 ${themeColor}-600">${task.theme}</span>
+                            <span class="text-xs font-bold px-3 py-1 rounded-full bg-gray-100 text-gray-600">${getTaskTypeText(task.type)}</span>
+                            ${isCompleted ? '<span class="text-xs font-bold px-3 py-1 rounded-full bg-green-100 text-green-600">✓ Выполнено</span>' : ''}
                         </div>
-                        <h4 class="font-bold text-lg">${task.question}</h4>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xs text-slate-500">${task.olympiadYear} • ${task.taskNumber}</div>
+                        <h4 class="font-bold text-lg mb-2">Задание ${task.id}: ${task.question}</h4>
+                        ${task.programReq ? `<p class="text-sm text-slate-600 mb-3">🎯 ${task.programReq}</p>` : ''}
                     </div>
                 </div>
                 
-                ${taskContent}
+                ${questionForm}
                 
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div class="text-sm text-slate-500">
-                        <div class="mb-1">🎯 Проверяет: ${task.programReq}</div>
+                <div class="flex justify-between items-center pt-4 border-t">
+                    <div>
+                        ${isCompleted ? `
+                            <div class="text-sm ${userResult.isCorrect ? 'text-green-600' : 'text-red-600'}">
+                                ${userResult.isCorrect ? '✅ Правильно' : '❌ Неправильно'} 
+                                ${userResult.score ? `(+${userResult.score} XP)` : ''}
+                            </div>
+                        ` : ''}
                     </div>
                     
-                    <button onclick="checkOlympiadTask(${task.id})" class="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-colors">
-                        ${isCompleted ? 'Посмотреть решение' : 'Проверить ответ'}
-                    </button>
-                </div>
-                
-                ${isCompleted ? `
-                    <div class="mt-4 p-4 ${userResult.correct ? 'bg-green-50' : 'bg-red-50'} rounded-lg">
-                        <div class="font-bold text-sm mb-2 ${userResult.correct ? 'text-green-700' : 'text-red-700'}">
-                            ${userResult.correct ? '✓ Правильный ответ' : '✗ Неправильный ответ'}
-                        </div>
-                        <div class="text-sm ${userResult.correct ? 'text-green-600' : 'text-red-600'}">${task.explanation}</div>
+                    <div class="flex gap-2">
+                        ${isCompleted ? `
+                            <button onclick="resetOlympiadTask(${task.id})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-bold text-sm hover:bg-gray-300 transition-colors">
+                                Сбросить
+                            </button>
+                        ` : ''}
+                        
+                        <button onclick="submitOlympiadTask(${task.id})" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">
+                            ${isCompleted ? 'Посмотреть решение' : 'Проверить ответ'}
+                        </button>
                     </div>
-                ` : ''}
+                </div>
             </div>
         `;
     }).join('');
-    
-    // Инициализировать перетаскивание для заданий на последовательность
-    gameData.olympiadTasks.filter(t => t.type === 'sequence').forEach(task => {
-        initSequenceTask(task.id);
-    });
-    
-    // Настроить фильтры
-    initOlympiadFilters();
 }
 
-function getTaskTypeName(type) {
-    const types = {
+function initThemeFilters() {
+    const themeFiltersContainer = document.getElementById('theme-filters');
+    if (!themeFiltersContainer || themeFiltersContainer.children.length > 0) return;
+    
+    // Получаем уникальные темы из заданий
+    const themes = [...new Set(gameData.olympiadTasks.map(task => task.theme))];
+    
+    themeFiltersContainer.innerHTML = themes.map(theme => {
+        const themeColor = getThemeColor(theme);
+        return `
+            <label class="flex items-center">
+                <input type="checkbox" class="filter-theme" value="${theme}" checked>
+                <span class="ml-2 text-sm ${themeColor}-600">${theme}</span>
+            </label>
+        `;
+    }).join('');
+}
+
+function applyOlympiadFilters() {
+    if (!gameData || !gameData.olympiadTasks) return;
+    
+    // Получаем активные фильтры
+    const activeLevels = Array.from(document.querySelectorAll('.filter-level:checked')).map(el => el.value);
+    const activeTypes = Array.from(document.querySelectorAll('.filter-type:checked')).map(el => el.value);
+    const activeThemes = Array.from(document.querySelectorAll('.filter-theme:checked')).map(el => el.value);
+    
+    // Получаем поисковый запрос
+    const searchInput = document.getElementById('olympiad-search');
+    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
+    
+    // Фильтрация заданий
+    let filteredTasks = gameData.olympiadTasks.filter(task => {
+        // Фильтр по уровню
+        if (activeLevels.length > 0 && !activeLevels.includes(task.level)) {
+            return false;
+        }
+        
+        // Фильтр по типу
+        if (activeTypes.length > 0 && !activeTypes.includes(task.type)) {
+            return false;
+        }
+        
+        // Фильтр по теме
+        if (activeThemes.length > 0 && !activeThemes.includes(task.theme)) {
+            return false;
+        }
+        
+        // Поиск по тексту
+        if (searchQuery) {
+            const taskText = (task.question + ' ' + task.programReq + ' ' + task.options?.join(' ')).toLowerCase();
+            if (!taskText.includes(searchQuery)) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Рендерим отфильтрованные задания
+    renderOlympiadTasks(filteredTasks);
+}
+
+function updateOlympiadStats(completedTasks, totalTasks, progressPercent) {
+    const doneElement = document.getElementById('olympiad-done');
+    const progressBar = document.getElementById('olympiad-progress-bar');
+    const correctCount = document.getElementById('correct-count');
+    const incorrectCount = document.getElementById('incorrect-count');
+    
+    if (doneElement) doneElement.textContent = `${completedTasks}/${totalTasks}`;
+    if (progressBar) progressBar.style.width = `${progressPercent}%`;
+    
+    // Рассчитываем правильные и неправильные ответы из результатов
+    let correct = 0;
+    let incorrect = 0;
+    
+    if (gameData.state.olympiadResults) {
+        Object.values(gameData.state.olympiadResults).forEach(result => {
+            if (result.isCorrect) {
+                correct++;
+            } else {
+                incorrect++;
+            }
+        });
+    }
+    
+    if (correctCount) correctCount.textContent = correct;
+    if (incorrectCount) incorrectCount.textContent = incorrect;
+}
+
+function getTaskTypeText(type) {
+    const typeMap = {
         'single': 'Один ответ',
         'multiple': 'Несколько ответов',
         'matching': 'Соответствие',
         'text': 'Текстовый ответ',
         'sequence': 'Последовательность'
     };
-    return types[type] || type;
-}
-
-function initSequenceTask(taskId) {
-    const container = document.getElementById(`sequence-${taskId}`);
-    if (!container) return;
-    
-    // Сделать элементы перетаскиваемыми
-    const items = container.children;
-    Array.from(items).forEach(item => {
-        item.draggable = true;
-        
-        item.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', item.textContent);
-            item.classList.add('opacity-50');
-        });
-        
-        item.addEventListener('dragend', () => {
-            item.classList.remove('opacity-50');
-        });
-        
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            item.classList.add('bg-blue-50');
-        });
-        
-        item.addEventListener('dragleave', () => {
-            item.classList.remove('bg-blue-50');
-        });
-        
-        item.addEventListener('drop', (e) => {
-            e.preventDefault();
-            item.classList.remove('bg-blue-50');
-            
-            const draggedContent = e.dataTransfer.getData('text/plain');
-            const draggedItem = Array.from(items).find(i => i.textContent.includes(draggedContent));
-            
-            if (draggedItem && draggedItem !== item) {
-                const temp = document.createElement('div');
-                container.insertBefore(temp, item);
-                container.insertBefore(item, draggedItem);
-                container.insertBefore(draggedItem, temp);
-                container.removeChild(temp);
-            }
-        });
-    });
+    return typeMap[type] || type;
 }
 
 function checkOlympiadTask(taskId) {
     const task = gameData.olympiadTasks.find(t => t.id === taskId);
     if (!task) return;
     
-    let isCorrect = false;
-    let userAnswer = '';
+    // Для демонстрации просто показываем модальное окно
+    const correctAnswerText = task.correctAnswer ? 
+        task.options.filter((opt, idx) => task.correctAnswer.includes(idx)).join(', ') : 
+        'Ответ зависит от задания';
     
-    if (task.type === 'text') {
-        const textarea = document.getElementById(`answer-${taskId}`);
-        if (textarea) {
-            userAnswer = textarea.value.trim().toLowerCase();
-            isCorrect = userAnswer === task.answer.toLowerCase();
-        }
-    } 
-    else if (task.type === 'single') {
-        const selected = document.querySelector(`input[name="task-${taskId}"]:checked`);
-        if (selected) {
-            userAnswer = parseInt(selected.value);
-            isCorrect = userAnswer === task.correct;
-        }
-    }
-    else if (task.type === 'multiple') {
-        const selected = Array.from(document.querySelectorAll(`input[name="task-${taskId}"]:checked`))
-            .map(el => parseInt(el.value));
-        userAnswer = selected;
-        isCorrect = JSON.stringify(selected.sort()) === JSON.stringify(task.correct.sort());
-    }
-    else if (task.type === 'matching') {
-        // Для простоты проверяем только первые соответствия
-        const selected = document.querySelector(`input[name="match-${taskId}"]:checked`);
-        if (selected) {
-            userAnswer = selected.value;
-            // В реальном приложении нужно проверять все соответствия
-            isCorrect = true; // Упрощенная проверка
-        }
-    }
-    else if (task.type === 'sequence') {
-        const container = document.getElementById(`sequence-${taskId}`);
-        if (container) {
-            const currentSequence = Array.from(container.children).map(el => 
-                el.textContent.replace('Перетащите', '').trim()
-            );
-            
-            // Сравниваем с правильной последовательностью
-            isCorrect = JSON.stringify(currentSequence) === JSON.stringify(task.sequence);
-            userAnswer = currentSequence;
-        }
+    showModal(`
+        <div class="text-center">
+            <h4 class="text-2xl font-bold mb-4">Задание ${taskId}</h4>
+            <p class="text-slate-600 mb-4">${task.question}</p>
+            <div class="bg-slate-50 rounded-xl p-4 mb-4 text-left">
+                <div class="font-bold text-sm mb-2">Тип задания:</div>
+                <div class="text-sm text-slate-600">${getTaskTypeText(task.type)}</div>
+            </div>
+            <div class="bg-emerald-50 rounded-xl p-4 mb-6 text-left">
+                <div class="font-bold text-sm mb-2 text-emerald-700">Правильный ответ:</div>
+                <div class="text-sm text-slate-700">
+                    ${correctAnswerText}
+                </div>
+            </div>
+            <button onclick="closeModal()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
+                ЗАКРЫТЬ
+            </button>
+        </div>
+    `);
+}
+
+function submitOlympiadTask(taskId) {
+    const task = gameData.olympiadTasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    // В реальном приложении здесь будет логика проверки ответов
+    // Для демонстрации просто добавляем результат
+    const isCorrect = Math.random() > 0.5; // Случайный результат для демонстрации
+    const score = isCorrect ? 25 : 0;
+    
+    if (!gameData.state.olympiadResults) {
+        gameData.state.olympiadResults = {};
     }
     
-    // Сохранить результат
     gameData.state.olympiadResults[taskId] = {
-        correct: isCorrect,
-        answer: userAnswer,
+        isCorrect: isCorrect,
+        score: score,
+        userAnswer: [0], // Для демонстрации
         timestamp: new Date().toISOString()
     };
     
-    // Обновить статистику
     if (isCorrect) {
-        gameData.state.correctAnswers++;
-        gameData.state.xp += task.level === 'base' ? 50 : task.level === 'advanced' ? 75 : 100;
-    } else {
-        gameData.state.incorrectAnswers++;
+        gameData.state.xp += score;
     }
     
-    // Показать результат
+    saveGameState();
+    renderOlympiadTasks(filteredOlympiadTasks);
+    
+    // Показываем результат
     showModal(`
         <div class="text-center">
-            <div class="text-5xl mb-4 ${isCorrect ? 'text-green-500' : 'text-red-500'}">
+            <div class="text-5xl mb-4 ${isCorrect ? 'text-emerald-500' : 'text-red-500'}">
                 ${isCorrect ? '✅' : '❌'}
             </div>
             <h4 class="text-2xl font-bold mb-2">${isCorrect ? 'Правильно!' : 'Неправильно'}</h4>
-            <p class="text-slate-500 mb-6">${task.explanation}</p>
+            <p class="text-slate-500 mb-6">${isCorrect ? `Вы получили +${score} XP` : 'Попробуйте еще раз'}</p>
             
             <div class="bg-slate-50 rounded-xl p-4 mb-6 text-left">
-                <div class="font-bold text-sm mb-2">Информация о задании:</div>
+                <div class="font-bold text-sm mb-2">Объяснение:</div>
                 <div class="text-sm text-slate-600">
-                    <p class="mb-1">🎯 Проверяет: ${task.programReq}</p>
-                    <p>🏆 Уровень: ${task.level === 'base' ? 'Базовый' : task.level === 'advanced' ? 'Повышенный' : 'Олимпиадный'}</p>
-                    <p class="mt-2">📅 Олимпиада: ${task.olympiadYear}, ${task.taskNumber}</p>
+                    ${task.programReq ? `Это задание проверяет: ${task.programReq}` : 'Задание проверяет знание материала.'}
                 </div>
             </div>
             
-            <button onclick="closeModal(); renderOlympiadTasks();" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
+            <button onclick="closeModal()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
                 ПРОДОЛЖИТЬ
             </button>
         </div>
     `);
-    
-    saveGameState();
 }
 
-function initOlympiadFilters() {
-    // Фильтры по теме
-    const themeFilters = document.getElementById('theme-filters');
-    if (themeFilters) {
-        const themes = [...new Set(gameData.olympiadTasks.map(t => t.theme))];
-        themeFilters.innerHTML = themes.map(theme => `
-            <label class="flex items-center">
-                <input type="checkbox" class="filter-theme" value="${theme}" checked>
-                <span class="ml-2">${theme}</span>
-            </label>
-        `).join('');
-    }
-    
-    // Применить фильтры
-    document.querySelectorAll('.filter-level, .filter-theme, .filter-type').forEach(filter => {
-        filter.onchange = filterOlympiadTasks;
-    });
-    
-    // Поиск
-    const olympiadSearch = document.getElementById('olympiad-search');
-    if (olympiadSearch) {
-        olympiadSearch.oninput = filterOlympiadTasks;
-    }
-}
-
-function filterOlympiadTasks() {
-    const searchInput = document.getElementById('olympiad-search');
-    const searchQuery = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    const selectedLevels = Array.from(document.querySelectorAll('.filter-level:checked')).map(c => c.value);
-    const selectedThemes = Array.from(document.querySelectorAll('.filter-theme:checked')).map(c => c.value);
-    const selectedTypes = Array.from(document.querySelectorAll('.filter-type:checked')).map(c => c.value);
-    
-    const filtered = gameData.olympiadTasks.filter(task => {
-        const matchesSearch = task.question.toLowerCase().includes(searchQuery) ||
-                            task.explanation.toLowerCase().includes(searchQuery);
-        const matchesLevel = selectedLevels.includes(task.level);
-        const matchesTheme = selectedThemes.includes(task.theme);
-        const matchesType = selectedTypes.includes(task.type);
+function resetOlympiadTask(taskId) {
+    if (gameData.state.olympiadResults && gameData.state.olympiadResults[taskId]) {
+        // Вычитаем XP, если задание было правильно выполнено
+        if (gameData.state.olympiadResults[taskId].isCorrect && gameData.state.olympiadResults[taskId].score) {
+            gameData.state.xp -= gameData.state.olympiadResults[taskId].score;
+        }
         
-        return matchesSearch && matchesLevel && matchesTheme && matchesType;
-    });
-    
-    const container = document.getElementById('olympiad-container');
-    if (container) {
-        container.innerHTML = filtered.map(task => {
-            const userResult = gameData.state.olympiadResults[task.id];
-            const isCompleted = !!userResult;
-            
-            return `
-                <div class="bg-white rounded-2xl p-6 border shadow-sm">
-                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                        <div>
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="text-xs font-bold px-3 py-1 rounded-full ${getTaskLevelColor(task.level)}-100 ${getTaskLevelColor(task.level)}-600">${task.level === 'base' ? 'Базовый' : task.level === 'advanced' ? 'Повышенный' : 'Олимпиадный'}</span>
-                                <span class="text-xs font-bold px-3 py-1 rounded-full ${getThemeColor(task.theme)}-100 ${getThemeColor(task.theme)}-600">${task.theme}</span>
-                                <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-600">${getTaskTypeName(task.type)}</span>
-                            </div>
-                            <h4 class="font-bold text-lg">${task.question.substring(0, 100)}${task.question.length > 100 ? '...' : ''}</h4>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs text-slate-500">${task.olympiadYear} • ${task.taskNumber}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center">
-                        <div class="text-sm text-slate-500">
-                            🎯 ${task.programReq}
-                        </div>
-                        
-                        <button onclick="checkOlympiadTask(${task.id})" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-colors">
-                            ${isCompleted ? 'Посмотреть' : 'Решить'}
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        delete gameData.state.olympiadResults[taskId];
+        saveGameState();
+        renderOlympiadTasks(filteredOlympiadTasks);
     }
 }
 
 function renderProgress() {
+    if (!gameData) return;
+    
+    // Обновить статистику прогресса тем
+    updateThemeProgress();
+    
     // Общая статистика
+    updateProgressStats();
+    
+    // Дерево прогресса
+    renderProgressTree();
+    
+    // Достижения
+    renderAchievements();
+    
+    // Рекомендации
+    renderRecommendations();
+}
+
+function updateProgressStats() {
     const totalXp = document.getElementById('total-xp');
     const totalScenes = document.getElementById('total-scenes');
     const correctAnswers = document.getElementById('correct-answers');
     const incorrectAnswers = document.getElementById('incorrect-answers');
     
-    if (totalXp) totalXp.textContent = gameData.state.xp;
-    if (totalScenes) totalScenes.textContent = gameData.state.completedScenes.length;
-    if (correctAnswers) correctAnswers.textContent = gameData.state.correctAnswers;
-    if (incorrectAnswers) incorrectAnswers.textContent = gameData.state.incorrectAnswers;
-    
-    // Дерево прогресса
+    if (totalXp) totalXp.textContent = gameData.state.xp || 0;
+    if (totalScenes) totalScenes.textContent = (gameData.state.completedScenes || []).length;
+    if (correctAnswers) correctAnswers.textContent = gameData.state.correctAnswers || 0;
+    if (incorrectAnswers) incorrectAnswers.textContent = gameData.state.incorrectAnswers || 0;
+}
+
+function renderProgressTree() {
     const progressTree = document.getElementById('progress-tree');
-    if (progressTree) {
-        progressTree.innerHTML = gameData.themes.map(theme => {
-            const progress = gameData.state.themeProgress[theme.title];
-            const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
-            const scorePercent = progress.total > 0 ? Math.round((progress.score / (progress.total * 25)) * 100) : 0;
-            
-            let recommendations = '';
-            if (percent < 30) {
-                recommendations = `Начать изучение темы "${theme.title}"`;
-            } else if (percent < 60) {
-                recommendations = `Продолжить изучение темы "${theme.title}"`;
-            } else if (scorePercent < 70) {
-                recommendations = `Повторить ключевые понятия темы "${theme.title}"`;
-            } else if (scorePercent < 90) {
-                recommendations = `Закрепить знания по теме "${theme.title}" через олимпиадные задания`;
-            } else {
-                recommendations = `Тема "${theme.title}" усвоена отлично`;
-            }
-            
-            return `
-                <div class="border-l-4 border-${theme.color}-border pl-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <div class="font-bold ${theme.color}-600">${theme.title} ${percent >= 80 ? '✓' : ''}</div>
-                        <div class="text-sm font-bold ${theme.color}-600">${percent}%</div>
-                    </div>
-                    <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
-                        <div class="h-full ${theme.color}-500 rounded-full" style="width: ${percent}%"></div>
-                    </div>
-                    <div class="text-sm text-slate-600 pl-4">
-                        <div class="mb-1">└── ${recommendations}</div>
-                        <div class="text-xs text-slate-500">Прогресс: ${progress.completed}/${progress.total} сцен • ${progress.score} XP</div>
-                    </div>
-                </div>
-            `;
-        }).join('');
+    if (!progressTree) return;
+    
+    if (!gameData || !gameData.themes) {
+        progressTree.innerHTML = '<p class="text-slate-500">Данные о темах не загружены</p>';
+        return;
     }
     
-    // Достижения
-    const achievementsContainer = document.getElementById('achievements-container');
-    if (achievementsContainer) {
-        achievementsContainer.innerHTML = gameData.achievements.map(ach => {
-            const earned = ach.earned || 
-                (ach.id === 1 && gameData.state.completedScenes.length > 0) ||
-                (ach.id === 2 && gameData.glossary.filter((t, idx) => idx < 50 && gameData.state.completedScenes.length > 10).length >= 50) ||
-                (ach.id === 3 && Object.keys(gameData.state.olympiadResults).length >= 10) ||
-                (ach.id === 4 && gameData.state.themeProgress['Человек'].completed >= 6) ||
-                (ach.id === 5 && gameData.state.themeProgress['Государство'].completed >= 6) ||
-                (ach.id === 6 && gameData.state.themeProgress['Культура'].completed >= 6) ||
-                (ach.id === 7 && gameData.state.themeProgress['Общение'].completed >= 6) ||
-                (ach.id === 8 && gameData.state.completedScenes.length >= 30);
-            
-            return `
-                <div class="text-center p-4 rounded-xl ${earned ? 'bg-yellow-50 border border-yellow-200' : 'bg-slate-50'}">
-                    <div class="text-2xl mb-2 ${earned ? 'text-yellow-500' : 'text-slate-300'}">
-                        <i class="${ach.icon}"></i>
-                    </div>
-                    <div class="font-bold text-sm mb-1 ${earned ? 'text-slate-800' : 'text-slate-400'}">${ach.name}</div>
-                    <div class="text-xs ${earned ? 'text-slate-600' : 'text-slate-400'}">${ach.description}</div>
+    progressTree.innerHTML = gameData.themes.map(theme => {
+        const progress = gameData.state.themeProgress[theme.title] || { completed: 0, total: 0, score: 0 };
+        const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
+        
+        return `
+            <div class="border-l-4 border-${theme.color}-500 pl-4 mb-6">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="font-bold ${theme.color}-600">${theme.title}</div>
+                    <div class="text-sm font-bold ${theme.color}-600">${percent}%</div>
                 </div>
-            `;
-        }).join('');
-    }
-    
-    // Рекомендации
-    const recommendationsContainer = document.getElementById('recommendations');
-    if (recommendationsContainer) {
-        let recommendationsHTML = '';
-        
-        // Найти тему с наименьшим прогрессом
-        let minProgressTheme = null;
-        let minProgress = 100;
-        
-        gameData.themes.forEach(theme => {
-            const progress = gameData.state.themeProgress[theme.title];
-            const percent = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0;
-            
-            if (percent < minProgress) {
-                minProgress = percent;
-                minProgressTheme = theme;
-            }
-        });
-        
-        if (minProgressTheme && minProgress < 80) {
-            recommendationsHTML += `
-                <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                    <i class="fas fa-lightbulb text-blue-500 mt-1"></i>
-                    <div>
-                        <div class="font-bold text-sm mb-1">Рекомендуем изучить:</div>
-                        <div class="text-sm text-slate-600">Тему "${minProgressTheme.title}" (прогресс: ${minProgress}%)</div>
-                    </div>
+                <div class="h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+                    <div class="h-full ${theme.color}-500 rounded-full" style="width: ${percent}%"></div>
                 </div>
-            `;
-        }
-        
-        // Рекомендация по олимпиадным заданиям
-        const olympiadProgress = Object.keys(gameData.state.olympiadResults).length;
-        if (olympiadProgress < 10) {
-            recommendationsHTML += `
-                <div class="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
-                    <i class="fas fa-trophy text-green-500 mt-1"></i>
-                    <div>
-                        <div class="font-bold text-sm mb-1">Для подготовки к олимпиаде:</div>
-                        <div class="text-sm text-slate-600">Пройдите олимпиадный тренажер (выполнено ${olympiadProgress}/20)</div>
-                    </div>
+                <div class="text-sm text-slate-600 mb-2">
+                    ${progress.completed}/${progress.total} сцен завершено
                 </div>
-            `;
-        }
-        
-        // Рекомендация по повторению
-        if (gameData.state.incorrectAnswers > gameData.state.correctAnswers * 0.3) {
-            recommendationsHTML += `
-                <div class="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
-                    <i class="fas fa-redo text-red-500 mt-1"></i>
-                    <div>
-                        <div class="font-bold text-sm mb-1">Рекомендуем повторить:</div>
-                        <div class="text-sm text-slate-600">Темы, в которых было много ошибок (ошибок: ${gameData.state.incorrectAnswers})</div>
-                    </div>
+                <div class="text-sm text-slate-600 mb-2">
+                    ${progress.score} XP заработано
                 </div>
-            `;
-        }
-        
-        recommendationsContainer.innerHTML = recommendationsHTML || '<p class="text-slate-500 text-sm">Все темы изучены хорошо! Попробуйте олимпиадные задания повышенной сложности.</p>';
-    }
-}
-
-function initSchemes() {
-    // Инициализация схем (уже реализовано в HTML)
-}
-
-function showActivityExample(step) {
-    const examples = {
-        need: "Потребность: Желание общаться с друзьями возникает из социальной потребности человека в принадлежности и признании. В игре это показано в сценах о межличностных отношениях.",
-        motive: "Мотив: Потребность в социальной поддержке и эмоциональной связи мотивирует человека к общению. Этот элемент проверяется в заданиях на анализ деятельности.",
-        goal: "Цель: Организовать встречу с друзьями в субботу вечером для совместного времяпрепровождения. Постановка целей изучается в теме 'Деятельность'.",
-        action: "Действие: Отправить приглашения в мессенджере, согласовать время и место, подготовиться к встрече. Конкретные действия анализируются в сценах о структуре деятельности."
-    };
-    
-    showModal(`
-        <div class="text-left">
-            <h4 class="text-xl font-bold mb-4">Пример из игры</h4>
-            <p class="text-slate-600 mb-6">${examples[step]}</p>
-            <p class="text-sm text-slate-500 mb-6">Этот элемент структуры деятельности проверяется в нескольких сценах игры</p>
-            <button onclick="closeModal()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors">
-                ПОНЯТНО
-            </button>
-        </div>
-    `);
-}
-
-function showBranchInfo(branch) {
-    const info = {
-        legislative: {
-            title: "Законодательная власть",
-            description: "Занимается созданием, изменением и отменой законов. В демократических государствах представлена парламентом.",
-            functions: ["Принятие законов", "Утверждение бюджета", "Контроль за деятельностью правительства", "Представительство интересов граждан"],
-            sceneRef: "Сцены 17-24 по теме 'Государство'"
-        },
-        executive: {
-            title: "Исполнительная власть",
-            description: "Осуществляет исполнение законов и управление государственными делами. Представлена правительством и министерствами.",
-            functions: ["Исполнение законов", "Управление государственными делами", "Разработка и исполнение бюджета", "Обеспечение безопасности и порядка"],
-            sceneRef: "Сцены 17-24 по теме 'Государство'"
-        },
-        judicial: {
-            title: "Судебная власть",
-            description: "Осуществляет правосудие, контролирует соблюдение законов, защищает права и свободы граждан.",
-            functions: ["Рассмотрение судебных дел", "Контроль за законностью", "Защита прав и свобод", "Толкование законов"],
-            sceneRef: "Сцены 17-24 по теме 'Государство'"
-        }
-    };
-    
-    const data = info[branch];
-    
-    showModal(`
-        <div class="text-left">
-            <h4 class="text-xl font-bold mb-4">${data.title}</h4>
-            <p class="text-slate-600 mb-4">${data.description}</p>
-            
-            <div class="mb-4">
-                <div class="font-bold text-sm mb-2">Основные функции:</div>
-                <ul class="text-sm text-slate-600 space-y-1">
-                    ${data.functions.map(f => `<li>• ${f}</li>`).join('')}
+                <div class="text-xs text-slate-500">
+                    Требования программы:
+                </div>
+                <ul class="text-xs text-slate-600 mt-1 space-y-1">
+                    ${theme.requirements.slice(0, 3).map(req => `
+                        <li class="flex items-start">
+                            <i class="fas fa-check text-green-500 mr-2 mt-0.5"></i>
+                            <span>${req}</span>
+                        </li>
+                    `).join('')}
                 </ul>
             </div>
-            
-            <div class="bg-slate-50 rounded-lg p-4 mb-6">
-                <div class="text-sm">
-                    <p>🎮 В игре: ${data.sceneRef}</p>
-                </div>
-            </div>
-            
-            <button onclick="closeModal()" class="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors">
-                ПОНЯТНО
-            </button>
-        </div>
-    `);
+        `;
+    }).join('');
 }
 
-function showGovernmentTask() {
-    showModal(`
-        <div class="text-left">
-            <h4 class="text-xl font-bold mb-4">Ситуационное задание по системе власти</h4>
-            <p class="text-slate-600 mb-6">Гражданин Н. обратился в местный исполнительный комитет с жалобой на незаконную стройку во дворе его дома. Какой орган власти должен рассмотреть эту жалобу и почему?</p>
-            
-            <div class="space-y-3 mb-6">
-                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="radio" name="gov-task" value="1" class="mr-3">
-                    <span>Местный Совет депутатов, так как это представительный орган</span>
-                </label>
-                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="radio" name="gov-task" value="2" class="mr-3">
-                    <span>Местный исполнительный комитет, так как он осуществляет контроль за соблюдением законодательства в сфере строительства</span>
-                </label>
-                <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-slate-50">
-                    <input type="radio" name="gov-task" value="3" class="mr-3">
-                    <span>Суд, так как это спор о правах</span>
-                </label>
+function renderAchievements() {
+    const container = document.getElementById('achievements-container');
+    if (!container) return;
+    
+    if (!gameData || !gameData.achievements) {
+        container.innerHTML = '<p class="text-slate-500">Достижения не загружены</p>';
+        return;
+    }
+    
+    // Обновить статус достижений
+    gameData.achievements.forEach(achievement => {
+        achievement.earned = checkAchievementStatus(achievement);
+    });
+    
+    container.innerHTML = gameData.achievements.map(achievement => `
+        <div class="text-center p-4 rounded-xl border ${achievement.earned ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}">
+            <div class="w-12 h-12 rounded-full ${achievement.earned ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center mx-auto mb-3">
+                <i class="${achievement.icon}"></i>
             </div>
-            
-            <button onclick="checkGovernmentTask()" class="w-full bg-red-600 text-white py-3 rounded-xl font-bold hover:bg-red-700 transition-colors mb-3">
-                ПРОВЕРИТЬ
-            </button>
-            
-            <div id="gov-task-feedback" class="hidden">
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <div class="font-bold text-green-700 mb-2">Правильно!</div>
-                    <div class="text-sm text-green-600">
-                        Местный исполнительный комитет осуществляет контроль за соблюдением законодательства, включая строительные нормы. 
-                        Это задание проверяет понимание системы государственной власти и полномочий органов местного управления.
-                    </div>
-                </div>
-            </div>
+            <div class="font-bold text-sm mb-1">${achievement.name}</div>
+            <div class="text-xs text-slate-500">${achievement.description}</div>
+            ${achievement.earned ? '<div class="text-xs text-green-600 font-bold mt-2">✓ Получено</div>' : ''}
         </div>
-    `);
+    `).join('');
 }
 
-function checkGovernmentTask() {
-    const selected = document.querySelector('input[name="gov-task"]:checked');
-    const feedback = document.getElementById('gov-task-feedback');
+function checkAchievementStatus(achievement) {
+    if (!gameData) return false;
     
-    if (!feedback) return;
+    switch(achievement.id) {
+        case 1: // Новичок
+            return gameData.state.completedScenes.length >= 1;
+        case 2: // Знаток терминов
+            return false; // Пока не реализовано
+        case 3: // Олимпиадник
+            return Object.keys(gameData.state.olympiadResults || {}).length >= 3; // Изменено на 3 для тестирования
+        case 4: // Социолог
+            const humanProgress = gameData.state.themeProgress['Человек'];
+            return humanProgress && humanProgress.completed >= humanProgress.total;
+        case 5: // Политолог
+            const stateProgress = gameData.state.themeProgress['Государство'];
+            return stateProgress && stateProgress.completed >= stateProgress.total;
+        case 6: // Культуролог
+            const cultureProgress = gameData.state.themeProgress['Культура'];
+            return cultureProgress && cultureProgress.completed >= cultureProgress.total;
+        case 7: // Коммуникатор
+            const communicationProgress = gameData.state.themeProgress['Общение'];
+            return communicationProgress && communicationProgress.completed >= communicationProgress.total;
+        case 8: // Мастер игры
+            return gameData.state.completedScenes.length >= gameData.scenes.length;
+        default:
+            return false;
+    }
+}
+
+function renderRecommendations() {
+    const container = document.getElementById('recommendations');
+    if (!container) return;
     
-    if (selected && selected.value === '2') {
-        feedback.classList.remove('hidden');
-        feedback.querySelector('.text-green-600').textContent = 
-            "Местный исполнительный комитет осуществляет контроль за соблюдением законодательства, включая строительные нормы. Это задание проверяет понимание системы государственной власти и полномочий органов местного управления. Подобные задания встречаются в олимпиадных тестах.";
-    } else {
-        feedback.classList.remove('hidden');
-        feedback.querySelector('.bg-green-50').classList.replace('bg-green-50', 'bg-red-50');
-        feedback.querySelector('.text-green-700').classList.replace('text-green-700', 'text-red-700');
-        feedback.querySelector('.text-green-600').classList.replace('text-green-600', 'text-red-600');
-        feedback.querySelector('.font-bold').textContent = "Неправильно!";
-        feedback.querySelector('.text-sm').textContent = 
-            "Правильный ответ: Местный исполнительный комитет, так как он осуществляет контроль за соблюдением законодательства в сфере строительства. Изучите полномочия органов местного управления.";
+    if (!gameData) {
+        container.innerHTML = '<p class="text-slate-500">Начните изучение для получения рекомендаций</p>';
+        return;
+    }
+    
+    const recommendations = [];
+    
+    // Проверяем прогресс по темам
+    const themes = Object.entries(gameData.state.themeProgress);
+    themes.sort((a, b) => (a[1].completed / a[1].total) - (b[1].completed / b[1].total));
+    
+    if (themes.length > 0 && themes[0][1].completed < themes[0][1].total) {
+        const [themeName, progress] = themes[0];
+        const themeColor = getThemeColor(themeName);
+        const percent = Math.round((progress.completed / progress.total) * 100);
+        
+        recommendations.push(`
+            <div class="flex items-start gap-3 p-3 bg-${themeColor}-50 rounded-lg">
+                <i class="fas fa-lightbulb ${themeColor}-500 mt-0.5"></i>
+                <div>
+                    <div class="font-bold text-sm ${themeColor}-600 mb-1">Рекомендация</div>
+                    <div class="text-xs text-slate-600">Продолжите тему "${themeName}" (${percent}% завершено)</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // Если нет сцен
+    if (gameData.state.completedScenes.length === 0) {
+        recommendations.push(`
+            <div class="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                <i class="fas fa-play-circle text-blue-500 mt-0.5"></i>
+                <div>
+                    <div class="font-bold text-sm text-blue-600 mb-1">Начало работы</div>
+                    <div class="text-xs text-slate-600">Начните сюжетную игру для получения опыта</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // Если есть ошибки
+    if (gameData.state.incorrectAnswers > 0) {
+        recommendations.push(`
+            <div class="flex items-start gap-3 p-3 bg-yellow-50 rounded-lg">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mt-0.5"></i>
+                <div>
+                    <div class="font-bold text-sm text-yellow-600 mb-1">Повторите материал</div>
+                    <div class="text-xs text-slate-600">У вас ${gameData.state.incorrectAnswers} ошибок. Рекомендуем повторить сложные темы.</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    // Если мало олимпиадных заданий
+    const olympiadCount = Object.keys(gameData.state.olympiadResults || {}).length;
+    if (olympiadCount < 5) {
+        recommendations.push(`
+            <div class="flex items-start gap-3 p-3 bg-purple-50 rounded-lg">
+                <i class="fas fa-trophy text-purple-500 mt-0.5"></i>
+                <div>
+                    <div class="font-bold text-sm text-purple-600 mb-1">Попробуйте олимпиадные задания</div>
+                    <div class="text-xs text-slate-600">Вы выполнили ${olympiadCount} заданий. Попробуйте решить больше!</div>
+                </div>
+            </div>
+        `);
+    }
+    
+    if (recommendations.length === 0) {
+        recommendations.push('<p class="text-slate-500 text-sm">Отличная работа! Продолжайте в том же духе.</p>');
+    }
+    
+    container.innerHTML = recommendations.join('');
+}
+
+// Модальное окно
+function showModal(html) {
+    const modal = document.getElementById('modal');
+    const modalContent = document.getElementById('modal-content-inner');
+    
+    if (modal && modalContent) {
+        modalContent.innerHTML = html;
+        modal.classList.add('active');
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('modal');
+    if (modal) {
+        modal.classList.remove('active');
     }
 }
 
@@ -970,63 +978,195 @@ function getTaskLevelColor(level) {
     }
 }
 
-function showModal(html) {
-    const modalContent = document.getElementById('modal-content');
-    const modal = document.getElementById('modal');
+// Функции для схем
+function showActivityExample(step) {
+    const stepNames = {
+        'need': 'Потребность',
+        'motive': 'Мотив',
+        'goal': 'Цель',
+        'action': 'Действие'
+    };
     
-    if (!modalContent || !modal) return;
-    
-    modalContent.innerHTML = html;
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
+    showModal(`
+        <div class="text-center">
+            <h4 class="text-xl font-bold mb-4">${stepNames[step] || step}</h4>
+            <p class="text-slate-600 mb-6">Это элемент структуры деятельности в обществоведении</p>
+            <button onclick="closeModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                Закрыть
+            </button>
+        </div>
+    `);
 }
 
-function closeModal() {
-    const modal = document.getElementById('modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-    }
+function showBranchInfo(branch) {
+    const branchNames = {
+        'legislative': 'Законодательная власть',
+        'executive': 'Исполнительная власть',
+        'judicial': 'Судебная власть'
+    };
+    
+    const descriptions = {
+        'legislative': 'Создает законы, представляет интересы народа (Парламент, Дума)',
+        'executive': 'Исполняет законы, управляет государством (Правительство, министерства)',
+        'judicial': 'Контролирует соблюдение законов, осуществляет правосудие (Суды)'
+    };
+    
+    showModal(`
+        <div class="text-center">
+            <h4 class="text-xl font-bold mb-4">${branchNames[branch] || branch}</h4>
+            <p class="text-slate-600 mb-6">${descriptions[branch] || 'Ветвь государственной власти'}</p>
+            <button onclick="closeModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+                Закрыть
+            </button>
+        </div>
+    `);
+}
+
+function showGovernmentTask() {
+    showModal(`
+        <div class="text-center">
+            <h4 class="text-xl font-bold mb-4">Ситуационное задание</h4>
+            <p class="text-slate-600 mb-4">Правительство предлагает новый закон о образовании. В какой ветви власти этот закон будет рассматриваться в первую очередь?</p>
+            <div class="space-y-3 mb-6">
+                <button onclick="checkGovernmentAnswer('legislative')" class="w-full p-3 border rounded-lg hover:bg-slate-50 text-left">
+                    А) Законодательная власть
+                </button>
+                <button onclick="checkGovernmentAnswer('executive')" class="w-full p-3 border rounded-lg hover:bg-slate-50 text-left">
+                    Б) Исполнительная власть
+                </button>
+                <button onclick="checkGovernmentAnswer('judicial')" class="w-full p-3 border rounded-lg hover:bg-slate-50 text-left">
+                    В) Судебная власть
+                </button>
+            </div>
+        </div>
+    `);
+}
+
+function checkGovernmentAnswer(answer) {
+    const isCorrect = answer === 'legislative';
+    showModal(`
+        <div class="text-center">
+            <div class="text-5xl mb-4 ${isCorrect ? 'text-emerald-500' : 'text-red-500'}">
+                ${isCorrect ? '✅' : '❌'}
+            </div>
+            <h4 class="text-2xl font-bold mb-2">${isCorrect ? 'Правильно!' : 'Неправильно'}</h4>
+            <p class="text-slate-600 mb-6">${isCorrect ? 'Законы создаются и рассматриваются законодательной властью (Парламентом).' : 'Правильный ответ: Законодательная власть. Именно она создает и рассматривает законы.'}</p>
+            <button onclick="closeModal()" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-bold hover:bg-slate-800 transition-colors">
+                ПОНЯТНО
+            </button>
+        </div>
+    `);
 }
 
 // Инициализация при загрузке
 document.addEventListener('DOMContentLoaded', function() {
-    // Загрузить состояние игры
-    loadGameState();
+    console.log('Страница загружена');
     
-    // Установить обработчик поиска для глоссария
+    // Проверить загрузку gameData
+    if (typeof gameData === 'undefined') {
+        console.error('gameData не загружен. Проверьте порядок подключения скриптов.');
+        return;
+    }
+    
+    // Закрытие модального окна при клике на фон
+    const modal = document.getElementById('modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    }
+    
+    // Инициализация поиска в глоссарии
     const termSearch = document.getElementById('term-search');
     if (termSearch) {
-        termSearch.oninput = function(e) {
+        termSearch.addEventListener('input', function(e) {
             const query = e.target.value.toLowerCase();
+            if (!gameData || !gameData.glossary) return;
+            
             const filtered = gameData.glossary.filter(i => 
                 i.t.toLowerCase().includes(query) || 
                 i.d.toLowerCase().includes(query) ||
                 i.c.toLowerCase().includes(query)
             );
-            renderGlossary(filtered);
-        };
+            
+            const container = document.getElementById('glossary-container');
+            if (container) {
+                container.innerHTML = filtered.map(item => {
+                    const themeColor = getThemeColor(item.c);
+                    return `
+                        <div class="term-card bg-white p-5 rounded-2xl border-l-4 border-${themeColor}-500">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="text-lg font-bold ${themeColor}-600">${item.t}</span>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[10px] px-2 py-0.5 ${themeColor}-100 rounded-full font-bold ${themeColor}-600 uppercase mb-1">${item.c}</span>
+                                </div>
+                            </div>
+                            <p class="text-sm text-slate-600 leading-relaxed mb-3">${item.d}</p>
+                            <div class="text-xs text-slate-400 flex items-center">
+                                <i class="fas fa-tag mr-1"></i> ${item.c}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        });
     }
     
-    // Обновить прогресс (только если на главной странице)
+    // Инициализация фильтров олимпиады
+    const filterLevels = document.querySelectorAll('.filter-level');
+    const filterTypes = document.querySelectorAll('.filter-type');
+    
+    if (filterLevels) {
+        filterLevels.forEach(filter => {
+            filter.addEventListener('change', applyOlympiadFilters);
+        });
+    }
+    
+    if (filterTypes) {
+        filterTypes.forEach(filter => {
+            filter.addEventListener('change', applyOlympiadFilters);
+        });
+    }
+    
+    // Инициализация поиска олимпиадных заданий
+    const olympiadSearch = document.getElementById('olympiad-search');
+    if (olympiadSearch) {
+        olympiadSearch.addEventListener('input', function(e) {
+            applyOlympiadFilters();
+        });
+    }
+    
+    // Инициализация прогресса при загрузке
     setTimeout(() => {
-        updateStoryProgress();
-        renderProgress();
-    }, 500);
+        updateThemeProgress();
+    }, 100);
 });
 
-// Глобальные функции для HTML
+// Сохранение и загрузка состояния
+function saveGameState() {
+    if (window.gameData && window.gameData.state) {
+        try {
+            localStorage.setItem('obshchestvovedenieGame', JSON.stringify(gameData.state));
+        } catch (e) {
+            console.error('Ошибка сохранения состояния:', e);
+        }
+    }
+}
+
+// Явная привязка функций к глобальному объекту window
 window.switchMode = switchMode;
 window.startNewGame = startNewGame;
 window.loadNextScene = loadNextScene;
 window.makeChoice = makeChoice;
 window.filterTermsByTheme = filterTermsByTheme;
 window.checkOlympiadTask = checkOlympiadTask;
+window.submitOlympiadTask = submitOlympiadTask;
+window.resetOlympiadTask = resetOlympiadTask;
 window.showActivityExample = showActivityExample;
 window.showBranchInfo = showBranchInfo;
 window.showGovernmentTask = showGovernmentTask;
-window.checkGovernmentTask = checkGovernmentTask;
 window.closeModal = closeModal;
-[file content end]
+window.checkGovernmentAnswer = checkGovernmentAnswer;
+window.applyOlympiadFilters = applyOlympiadFilters;
